@@ -3,7 +3,9 @@ package com.hicling.iictcling
 import android.annotation.SuppressLint
 import android.app.Activity
 import android.app.AlertDialog
+import android.graphics.Color
 import android.os.Build
+import android.os.Bundle
 import android.util.Log
 import android.view.Gravity
 import android.view.KeyEvent
@@ -129,7 +131,7 @@ open class JsActivity : Activity() {
                 this.finish()
             }
         }
-
+        // toast
         mWebView?.registerHandler("toast") { data, function ->
             Log.i(tag, "js call toast")
             Log.i(tag, data)
@@ -140,7 +142,7 @@ open class JsActivity : Activity() {
             toast.show()
             function.onCallBack("toast")
         }
-
+        // alert
         mWebView?.registerHandler("alert") { data, function ->
             Log.i(tag, "js call alert")
             Log.i(tag, data)
@@ -152,6 +154,7 @@ open class JsActivity : Activity() {
                     function.onCallBack("alert")
                 }.create().show()
         }
+        // loading
         mWebView?.registerHandler("loading") { data, function ->
             Log.i(tag, "js call loading")
             Log.i(tag, data)
@@ -161,8 +164,28 @@ open class JsActivity : Activity() {
             else modal.visibility = View.INVISIBLE
             function.onCallBack("loading")
         }
+        // set status bar
+        mWebView?.registerHandler("setStatusBar") { data, function ->
+            Log.i(tag, "js call set navbar")
+            Log.i(tag, data)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                Log.i(tag, "call set navbar success")
+                val data = Gson().fromJson(data, StatusBarData::class.java)
+                val color = Color.parseColor(data.color)
+                Log.i(tag, color.toString())
+                this.window.statusBarColor = color
+                function.onCallBack("setStatusBar")
+            } else {
+                Log.i(tag, "call set navbar fail")
+                function.onCallBack("Error")
+            }
+        }
     }
 
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+
+    }
 
     override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
         if (keyCode == KeyEvent.KEYCODE_BACK && mWebView!!.canGoBack()) {
