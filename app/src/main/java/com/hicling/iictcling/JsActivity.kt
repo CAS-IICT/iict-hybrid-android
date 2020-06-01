@@ -1,8 +1,21 @@
+/*
+*
+* devilyouwei
+* devilyouwei@gmail.com
+* 2020-5-20
+* IICT copyright
+* 中国科学院计算所苏州
+* MIT License
+* All activities with webview component need to extend this class
+*/
+
 package com.hicling.iictcling
 
 import android.annotation.SuppressLint
 import android.app.Activity
 import android.app.AlertDialog
+import android.content.Intent
+import android.graphics.Bitmap
 import android.graphics.Color
 import android.os.Build
 import android.os.Bundle
@@ -17,25 +30,26 @@ import com.github.lzyzsd.jsbridge.BridgeWebView
 import com.github.lzyzsd.jsbridge.BridgeWebViewClient
 import com.google.gson.Gson
 
-/*
-All activities with webview component need to extend this class
- */
-
 @SuppressLint("Registered")
 open class JsActivity : Activity() {
     private var mWebView: BridgeWebView? = null
     private var splashView: LinearLayout? = null
+    private var loading = false
     private val tag = this.javaClass.canonicalName
 
     @SuppressLint("SetJavaScriptEnabled")
     open fun initWebView(
         url: String,
         mWebView: BridgeWebView? = null,
-        splashView: LinearLayout? = null
+        splashView: LinearLayout? = null,
+        loading: Boolean = false
     ) {
         this.mWebView = mWebView
         this.splashView = splashView
+        this.loading = loading
+
         if (mWebView != null) {
+            showLoading(loading)
             val webSettings: WebSettings = mWebView.settings
 
             webSettings.setSupportZoom(false)
@@ -69,8 +83,11 @@ open class JsActivity : Activity() {
                 webSettings.loadsImagesAutomatically = false
             }
 
+            //deal with the error network
             mWebView.webViewClient = object : BridgeWebViewClient(mWebView) {
+
                 override fun onPageFinished(view: WebView?, url: String?) {
+                    showLoading(false)
                     if (splashView != null) Animation().fadeOut(splashView as View, 1000)
                     super.onPageFinished(view, url)
                 }
@@ -159,9 +176,7 @@ open class JsActivity : Activity() {
             Log.i(tag, "js call loading")
             Log.i(tag, data)
             val data = Gson().fromJson(data, LoadingData::class.java)
-            val modal: LinearLayout = findViewById(R.id.load)
-            if (data.load) modal.visibility = View.VISIBLE
-            else modal.visibility = View.INVISIBLE
+            showLoading(data.load)
             function.onCallBack("loading")
         }
         // set status bar
@@ -180,11 +195,30 @@ open class JsActivity : Activity() {
                 function.onCallBack("Error")
             }
         }
+        // start a new webview activity and go to the specified url
+        mWebView?.registerHandler("go") { data, function ->
+            Log.i(tag, "js call go other webview, new activity")
+            Log.i(tag, data)
+            val data = Gson().fromJson(data, WebViewData::class.java)
+            goWebView(data.url, data.loading)
+            function.onCallBack("load url: ${data.url}")
+        }
     }
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
+    // go to other activity
+    private fun goWebView(url: String, loading: Boolean = false) {
+        val intent = Intent(this, WebViewActivity::class.java)
+        val bundle = Bundle()
+        bundle.putString("url", url)
+        bundle.putBoolean("loading", loading)
+        intent.putExtras(bundle)
+        startActivity(intent)
+    }
 
+    private fun showLoading(load: Boolean) {
+        val modal: LinearLayout = findViewById(R.id.load)
+        if (load) modal.visibility = View.VISIBLE
+        else modal.visibility = View.INVISIBLE
     }
 
     override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
@@ -194,5 +228,6 @@ open class JsActivity : Activity() {
         }
         return super.onKeyDown(keyCode, event)
     }
+
 }
 

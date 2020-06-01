@@ -4,11 +4,12 @@ import android.os.Bundle
 import android.util.Log
 import android.widget.LinearLayout
 import com.github.lzyzsd.jsbridge.BridgeWebView
+import com.google.gson.Gson
 import com.hicling.clingsdk.ClingSdk
 import com.hicling.clingsdk.devicemodel.PERIPHERAL_DEVICE_INFO_CONTEXT
 import com.hicling.clingsdk.listener.OnBleListener.OnBleDataListener
 import com.hicling.clingsdk.listener.OnBleListener.OnDeviceConnectedListener
-import com.hicling.clingsdk.listener.OnSdkReadyListener
+import com.hicling.clingsdk.listener.OnNetworkListener
 import com.hicling.clingsdk.model.DayTotalDataModel
 
 
@@ -18,16 +19,20 @@ class MainActivity : JsActivity() {
     private val appSecret: String = "92f767d18c3e843bb23e317617c55175"
     private val tag = this.javaClass.canonicalName
     private var deviceInfo: PERIPHERAL_DEVICE_INFO_CONTEXT? = null
+    private var sdkReady: Boolean = false
+    private val scanTime = 15000
 
 
     // sdk is ready
-    private val clingReady = object : OnSdkReadyListener {
-        override fun onClingSdkReady() {
-            Log.i(tag, "onClingSdkReady")
+    private val clingReady = object : OnNetworkListener {
+        override fun onSucceeded(p0: Any?, p1: Any?) {
+            Log.i(tag, "SDK is ready")
+            sdkReady = true
         }
 
-        override fun onFailed(s: String?) {
-            Log.i(tag, "onClingSdkReady onFailed $s")
+        override fun onFailed(p0: Int, p1: String?) {
+            Log.i(tag, "onClingSdkReady onFailed $p1")
+            sdkReady = false
         }
     }
 
@@ -82,6 +87,42 @@ class MainActivity : JsActivity() {
         val splashView: LinearLayout = findViewById(R.id.splash)
         // 初始化
         this.initWebView(url, mWebView, splashView)
+        this.register(mWebView)
+    }
+
+    private fun register(mWebView: BridgeWebView? = null) {
+        mWebView?.registerHandler("startScan") { _, function ->
+            Log.i(tag, "js call start scanning")
+            if (sdkReady) {
+                ClingSdk.stopScan()
+                if (!ClingSdk.isAccountBondWithCling()) {
+                    ClingSdk.setClingDeviceType(ClingSdk.CLING_DEVICE_TYPE_ALL)
+                }
+                Log.i(tag, "scan time $scanTime")
+                ClingSdk.startScan(scanTime) { o ->
+                    //蓝牙连接成功后，不会再扫描
+                    Log.i(tag, "onBleScanUpdated()")
+
+                    if (o != null) {
+                        function.onCallBack(Gson().toJson(o))
+                    }
+
+                }
+            } else {
+                Log.i(tag,"Start scan: SDK is not ready")
+                function.onCallBack("Start scan: Cling SDK is not ready!")
+            }
+        }
+        mWebView?.registerHandler("stopScan") { _, function ->
+            Log.i(tag, "js call stop scan")
+            if (sdkReady) {
+                ClingSdk.stopScan()
+                function.onCallBack("stop scan")
+            } else {
+                Log.i(tag,"Stop scan: SDK is not ready")
+                function.onCallBack("Stop scan: Cling SDK is not ready!")
+            }
+        }
     }
 
 
