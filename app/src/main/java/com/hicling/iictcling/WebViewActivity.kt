@@ -2,7 +2,7 @@ package com.hicling.iictcling
 
 import android.os.Bundle
 import android.util.Log
-import com.github.lzyzsd.jsbridge.BridgeWebView
+import wendu.webviewjavascriptbridge.WVJBWebView
 
 class WebViewActivity : JsActivity() {
     private val tag = this.javaClass.canonicalName
@@ -11,7 +11,7 @@ class WebViewActivity : JsActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_webview)
 
-        val mWebView: BridgeWebView = findViewById(R.id.webview)
+        val mWebView: WVJBWebView = findViewById(R.id.webview)
         val bundle = this.intent.extras
         val url = bundle?.get("url").toString()
         val loading = bundle?.get("loading") as Boolean

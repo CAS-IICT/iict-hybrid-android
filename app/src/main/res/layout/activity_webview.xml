@@ -6,7 +6,7 @@
     android:layout_height="match_parent"
     tools:context=".WebViewActivity">
 
-    <com.github.lzyzsd.jsbridge.BridgeWebView
+    <wendu.webviewjavascriptbridge.WVJBWebView
         android:id="@+id/webview"
         android:layout_width="match_parent"
         android:layout_height="match_parent">
@@ -28,6 +28,6 @@
                 app:indicatorName="BallPulseIndicator" />
         </LinearLayout>
 
-    </com.github.lzyzsd.jsbridge.BridgeWebView>
+    </wendu.webviewjavascriptbridge.WVJBWebView>
 
 </LinearLayout>

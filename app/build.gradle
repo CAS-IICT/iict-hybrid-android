@@ -43,7 +43,6 @@ repositories {
 
 dependencies {
     implementation "org.jetbrains.kotlin:kotlin-stdlib:${kotlin_version}"
-    implementation 'com.github.lzyzsd:jsbridge:1.0.4'
     testImplementation 'junit:junit:4.13'
     implementation 'com.google.code.gson:gson:2.8.6'
     implementation 'com.wang.avi:library:2.1.3'

@@ -15,7 +15,6 @@ import android.annotation.SuppressLint
 import android.app.Activity
 import android.app.AlertDialog
 import android.content.Intent
-import android.graphics.Bitmap
 import android.graphics.Color
 import android.os.Build
 import android.os.Bundle
@@ -26,13 +25,12 @@ import android.view.View
 import android.webkit.*
 import android.widget.LinearLayout
 import android.widget.Toast
-import com.github.lzyzsd.jsbridge.BridgeWebView
-import com.github.lzyzsd.jsbridge.BridgeWebViewClient
 import com.google.gson.Gson
+import wendu.webviewjavascriptbridge.WVJBWebView
 
 @SuppressLint("Registered")
 open class JsActivity : Activity() {
-    private var mWebView: BridgeWebView? = null
+    private var mWebView: WVJBWebView? = null
     private var splashView: LinearLayout? = null
     private var loading = false
     private val tag = this.javaClass.canonicalName
@@ -40,7 +38,7 @@ open class JsActivity : Activity() {
     @SuppressLint("SetJavaScriptEnabled")
     open fun initWebView(
         url: String,
-        mWebView: BridgeWebView? = null,
+        mWebView: WVJBWebView? = null,
         splashView: LinearLayout? = null,
         loading: Boolean = false
     ) {
@@ -70,8 +68,8 @@ open class JsActivity : Activity() {
             webSettings.cacheMode = WebSettings.LOAD_NO_CACHE
             webSettings.domStorageEnabled = true //DOM Storage
 
-            mWebView.overScrollMode = BridgeWebView.OVER_SCROLL_NEVER // 取消WebView中滚动或拖动到顶部、底部时的阴影
-            mWebView.scrollBarStyle = BridgeWebView.SCROLLBARS_INSIDE_OVERLAY // 取消滚动条白边效果
+            mWebView.overScrollMode = WVJBWebView.OVER_SCROLL_NEVER // 取消WebView中滚动或拖动到顶部、底部时的阴影
+            mWebView.scrollBarStyle = WVJBWebView.SCROLLBARS_INSIDE_OVERLAY // 取消滚动条白边效果
             //获取触摸焦点
             mWebView.requestFocusFromTouch()
             // >= 19(SDK4.4)启动硬件加速，否则启动软件加速
@@ -84,7 +82,7 @@ open class JsActivity : Activity() {
             }
 
             //deal with the error network
-            mWebView.webViewClient = object : BridgeWebViewClient(mWebView) {
+            mWebView.webViewClient = object : WebViewClient() {
 
                 override fun onPageFinished(view: WebView?, url: String?) {
                     showLoading(false)
@@ -135,74 +133,84 @@ open class JsActivity : Activity() {
         }
     }
 
-    // use to init all the bridge functions to handle js call
+    // give standard response as JSON to frontend
+    open fun json(status: Int, data: Any? = null, msg: String = ""): String {
+        var obj: String? = null
+        if (data != null) {
+            obj = Gson().toJson(data)
+        }
+        return Gson().toJson(ResData(status, obj, msg))
+    }
+
+    // use to init all the bridge functions to handle js call, only for the activities which extends jsActivity
     private fun initBridgeFunc() {
         Log.i(tag, "initBridgeFunc")
         // back
-        mWebView?.registerHandler("back") { _, function ->
+        mWebView?.registerHandler("back", WVJBWebView.WVJBHandler<Any?, Any?> { _, function ->
             Log.i(tag, "js call back")
             if (mWebView!!.canGoBack()) {
                 mWebView?.goBack()
-                function.onCallBack("back")
+                function.onResult(json(1))
             } else {
+                function.onResult(json(1))
                 this.finish()
             }
-        }
+        })
         // toast
-        mWebView?.registerHandler("toast") { data, function ->
+        mWebView?.registerHandler("toast", WVJBWebView.WVJBHandler<Any?, Any?> { data, function ->
             Log.i(tag, "js call toast")
-            Log.i(tag, data)
-            val data = Gson().fromJson(data, ToastData::class.java)
-            Log.i(tag, "js call toast")
+            Log.i(tag, data.toString())
+            val data = Gson().fromJson(data.toString(), ToastData::class.java)
             val toast = Toast.makeText(this, data.text, Toast.LENGTH_SHORT)
             toast.setGravity(Gravity.BOTTOM, 0, 100)
             toast.show()
-            function.onCallBack("toast")
-        }
+            function.onResult(json(1))
+        })
         // alert
-        mWebView?.registerHandler("alert") { data, function ->
+        mWebView?.registerHandler("alert", WVJBWebView.WVJBHandler<Any?, Any?> { data, function ->
             Log.i(tag, "js call alert")
-            Log.i(tag, data)
-            val data = Gson().fromJson(data, AlertData::class.java)
+            Log.i(tag, data.toString())
+            val data = Gson().fromJson(data.toString(), AlertData::class.java)
             AlertDialog.Builder(this)
                 .setMessage(data.message)
                 .setTitle(data.title)
                 .setPositiveButton(data.btnConfirm) { _, _ ->
-                    function.onCallBack("alert")
+                    function.onResult(json(1))
                 }.create().show()
-        }
+        })
         // loading
-        mWebView?.registerHandler("loading") { data, function ->
+        mWebView?.registerHandler("loading", WVJBWebView.WVJBHandler<Any?, Any?> { data, function ->
             Log.i(tag, "js call loading")
-            Log.i(tag, data)
-            val data = Gson().fromJson(data, LoadingData::class.java)
+            Log.i(tag, data.toString())
+            val data = Gson().fromJson(data.toString(), LoadingData::class.java)
             showLoading(data.load)
-            function.onCallBack("loading")
-        }
+            function.onResult(json(1))
+        })
         // set status bar
-        mWebView?.registerHandler("setStatusBar") { data, function ->
-            Log.i(tag, "js call set navbar")
-            Log.i(tag, data)
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                Log.i(tag, "call set navbar success")
-                val data = Gson().fromJson(data, StatusBarData::class.java)
-                val color = Color.parseColor(data.color)
-                Log.i(tag, color.toString())
-                this.window.statusBarColor = color
-                function.onCallBack("setStatusBar")
-            } else {
-                Log.i(tag, "call set navbar fail")
-                function.onCallBack("Error")
-            }
-        }
+        mWebView?.registerHandler("setStatusBar",
+            WVJBWebView.WVJBHandler<Any?, Any?> { data, function ->
+                Log.i(tag, "js call set navbar")
+                Log.i(tag, data.toString())
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                    Log.i(tag, "call set navbar success")
+                    val data = Gson().fromJson(data.toString(), StatusBarData::class.java)
+                    val color = Color.parseColor(data.color)
+                    Log.i(tag, color.toString())
+                    this.window.statusBarColor = color
+                    function.onResult(json(1))
+                } else {
+                    Log.i(tag, "call set navbar fail")
+                    function.onResult(json(0, null, "Low Version, need more than Android5.0"))
+                }
+            })
         // start a new webview activity and go to the specified url
-        mWebView?.registerHandler("go") { data, function ->
+        mWebView?.registerHandler("go", WVJBWebView.WVJBHandler<Any?, Any?> { data, function ->
             Log.i(tag, "js call go other webview, new activity")
-            Log.i(tag, data)
-            val data = Gson().fromJson(data, WebViewData::class.java)
+            Log.i(tag, data.toString())
+            val data = Gson().fromJson(data.toString(), WebViewData::class.java)
             goWebView(data.url, data.loading)
-            function.onCallBack("load url: ${data.url}")
-        }
+            function.onResult(json(1, null, data.url))
+        })
     }
 
     // go to other activity
