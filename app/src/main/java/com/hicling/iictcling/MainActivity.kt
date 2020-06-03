@@ -8,6 +8,7 @@ package com.hicling.iictcling
 
 import android.os.Bundle
 import android.util.Log
+import android.view.View
 import android.widget.LinearLayout
 import com.google.gson.Gson
 import com.hicling.clingsdk.ClingSdk
@@ -19,21 +20,36 @@ import com.hicling.clingsdk.listener.OnSdkReadyListener
 import com.hicling.clingsdk.model.DayTotalDataModel
 import wendu.webviewjavascriptbridge.WVJBWebView
 
-class MainActivity : JsActivity() {
-    private val url: String = "http://192.168.1.79:8080"
+class MainActivity : WebViewActivity() {
+    override var url: String = "http://192.168.1.79:8080"
+    private var content: Int = R.layout.activity_main
     private val appID: String = "HCd176b8b47b3ed84c"
     private val appSecret: String = "92f767d18c3e843bb23e317617c55175"
-    private val tag: String = this.javaClass.canonicalName.toString()
+    override val tag: String = this.javaClass.canonicalName.toString()
     private var deviceInfo: PERIPHERAL_DEVICE_INFO_CONTEXT? = null
     private val scanTime: Int = 3000
+    private var splashView: LinearLayout? = null
     private var mWebView: WVJBWebView? = null
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setContentView(content)
+        splashView = findViewById(R.id.splash)
+        findViewById<WVJBWebView>(R.id.webview)?.let {
+            mWebView = it
+            initWebView(it)
+            initCling()
+        }
+    }
 
     // sdk is ready
     private val clingReady = object : OnSdkReadyListener {
         override fun onClingSdkReady() {
             Log.i(tag, "SDK is ready")
             // init bridge functions related to sdk after success
-            initBridge()
+            mWebView?.let {
+                initBridge(it)
+            }
         }
 
         override fun onFailed(p0: String?) {
@@ -78,22 +94,25 @@ class MainActivity : JsActivity() {
             }
         }
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_main)
-        val mWebView: WVJBWebView = findViewById(R.id.webview)
-        val splashView: LinearLayout = findViewById(R.id.splash)
-        this.mWebView = mWebView
-        // 初始化
-        this.initWebView(url, mWebView, splashView)
-        this.initCling()
+    override fun onLoadError() {
+        super.onLoadError()
+        splashView?.let {
+            Animation().fadeOut(it as View, 1000)
+        }
+    }
+
+    override fun onLoadFinish() {
+        super.onLoadFinish()
+        splashView?.let {
+            Animation().fadeOut(it as View, 1000)
+        }
     }
 
     // these bridge functions can only used in this activity
-    private fun initBridge() {
+    private fun initBridge(mWebView: WVJBWebView) {
         Log.i(tag, "Init more functions for sdk")
         // sdk sign in
-        mWebView?.registerHandler("signIn", WVJBWebView.WVJBHandler<Any?, Any?> { data, function ->
+        mWebView.registerHandler("signIn", WVJBWebView.WVJBHandler<Any?, Any?> { data, function ->
             Log.i(tag, "js call signIn")
             Log.i(tag, data.toString())
             val data = Gson().fromJson(data.toString(), SignInData::class.java)
@@ -110,7 +129,7 @@ class MainActivity : JsActivity() {
             })
         })
         // sdk sign up
-        mWebView?.registerHandler("signUp", WVJBWebView.WVJBHandler<Any?, Any?> { data, function ->
+        mWebView.registerHandler("signUp", WVJBWebView.WVJBHandler<Any?, Any?> { data, function ->
             Log.i(tag, "js call signUp")
             Log.i(tag, data.toString())
             val data = Gson().fromJson(data.toString(), SignUpData::class.java)
@@ -132,7 +151,7 @@ class MainActivity : JsActivity() {
         })
 
         // start scan devices
-        mWebView?.registerHandler("startScan", WVJBWebView.WVJBHandler<Any?, Any?> { _, function ->
+        mWebView.registerHandler("startScan", WVJBWebView.WVJBHandler<Any?, Any?> { _, function ->
             Log.i(tag, "js call start scanning")
             ClingSdk.stopScan()
             if (!ClingSdk.isAccountBondWithCling()) {
@@ -150,7 +169,7 @@ class MainActivity : JsActivity() {
             }
         })
         // stop scan devices
-        mWebView?.registerHandler("stopScan", WVJBWebView.WVJBHandler<Any?, Any?> { _, function ->
+        mWebView.registerHandler("stopScan", WVJBWebView.WVJBHandler<Any?, Any?> { _, function ->
             Log.i(tag, "js call stop scan")
             ClingSdk.stopScan()
             function.onResult(json(1))
