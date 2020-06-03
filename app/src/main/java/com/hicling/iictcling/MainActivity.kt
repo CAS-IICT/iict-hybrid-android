@@ -25,9 +25,9 @@ class MainActivity : WebViewActivity() {
     private var content: Int = R.layout.activity_main
     private val appID: String = "HCd176b8b47b3ed84c"
     private val appSecret: String = "92f767d18c3e843bb23e317617c55175"
-    override val tag: String = this.javaClass.canonicalName.toString()
+    override val tag: String = this.javaClass.simpleName
     private var deviceInfo: PERIPHERAL_DEVICE_INFO_CONTEXT? = null
-    private val scanTime: Int = 3000
+    private val scanTime: Int = 15000
     private var splashView: LinearLayout? = null
     private var mWebView: WVJBWebView? = null
 
@@ -78,21 +78,20 @@ class MainActivity : WebViewActivity() {
         override fun onGetDayTotalData(dayTotalDataModel: DayTotalDataModel?) {}
     }
 
-    private val mDeviceConnectedListener =
-        object : OnDeviceConnectedListener {
-            override fun onDeviceConnected() {
-                Log.i(tag, "onDeviceConnected()")
-            }
-
-            override fun onDeviceDisconnected() {
-                Log.i(tag, "onDeviceDisconnected()")
-            }
-
-            override fun onDeviceInfoReceived(o: Any) {
-                deviceInfo = o as PERIPHERAL_DEVICE_INFO_CONTEXT
-                Log.i(tag, "onDeviceInfoReceived: " + deviceInfo?.softwareVersion)
-            }
+    private val mDeviceConnectedListener = object : OnDeviceConnectedListener {
+        override fun onDeviceConnected() {
+            Log.i(tag, "onDeviceConnected()")
         }
+
+        override fun onDeviceDisconnected() {
+            Log.i(tag, "onDeviceDisconnected()")
+        }
+
+        override fun onDeviceInfoReceived(o: Any) {
+            deviceInfo = o as PERIPHERAL_DEVICE_INFO_CONTEXT
+            Log.i(tag, "onDeviceInfoReceived: " + deviceInfo?.softwareVersion)
+        }
+    }
 
     override fun onLoadError() {
         super.onLoadError()
@@ -149,19 +148,29 @@ class MainActivity : WebViewActivity() {
                     }
                 })
         })
+        mWebView.registerHandler(
+            "getClingUserInfo",
+            WVJBWebView.WVJBHandler<Any?, Any?> { _, function ->
+                ClingSdk.requestUserProfile(object : OnNetworkListener {
+                    override fun onSucceeded(p0: Any?, p1: Any?) {
+                        function.onResult(json(1, p0, p1.toString()))
+                    }
+
+                    override fun onFailed(p0: Int, p1: String?) {
+                        function.onResult(json(1, null, p1.toString()))
+                    }
+                })
+            })
 
         // start scan devices
         mWebView.registerHandler("startScan", WVJBWebView.WVJBHandler<Any?, Any?> { _, function ->
             Log.i(tag, "js call start scanning")
-            ClingSdk.stopScan()
-            if (!ClingSdk.isAccountBondWithCling()) {
+            if (!ClingSdk.isAccountBondWithCling())
                 ClingSdk.setClingDeviceType(ClingSdk.CLING_DEVICE_TYPE_ALL)
-            }
-            Log.i(tag, "scan time $scanTime")
-            ClingSdk.startScan(scanTime) { o ->
-                //蓝牙连接成功后，不会再扫描
-                Log.i(tag, "onBleScanUpdated()")
 
+            ClingSdk.stopScan()
+            ClingSdk.startScan(scanTime) { o ->
+                Log.i(tag, "sssssssssssssssss")
                 if (o != null) {
                     function.onResult(json(1, o, "scan success"))
                 }

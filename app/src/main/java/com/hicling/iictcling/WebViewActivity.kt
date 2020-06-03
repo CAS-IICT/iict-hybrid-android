@@ -32,8 +32,7 @@ import wendu.webviewjavascriptbridge.WVJBWebView
 open class WebViewActivity : Activity() {
 
     open var url: String = ""
-    private val baseTag: String = this.javaClass.canonicalName.toString()
-    open val tag: String = this.javaClass.canonicalName.toString()
+    open val tag: String = this.javaClass.simpleName
     private var loading: Boolean = false
     private val content: Int = R.layout.activity_webview // overridable
     private var mWebView: WVJBWebView? = null
@@ -41,16 +40,14 @@ open class WebViewActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val bundle = this.intent.extras
-        if (tag == baseTag) {
-            bundle?.getBoolean("loading")?.let { loading = it }
-            // 当有url传入的时候在本类中直接调用initWebView，该类一般不被继承了
-            bundle?.getString("url")?.let {
-                setContentView(content)
-                val mWebView: WVJBWebView = findViewById(R.id.webview)
-                this.mWebView = mWebView
-                url = it
-                initWebView(mWebView, loading)
-            }
+        bundle?.getBoolean("loading")?.let { loading = it }
+        // 当有url传入的时候在本类中直接调用initWebView，该类一般不被继承了
+        bundle?.getString("url")?.let {
+            setContentView(content)
+            val mWebView: WVJBWebView = findViewById(R.id.webview)
+            this.mWebView = mWebView
+            url = it
+            initWebView(mWebView, loading)
         }
     }
 
