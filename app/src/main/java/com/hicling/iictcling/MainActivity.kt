@@ -34,6 +34,7 @@ class MainActivity : WebViewActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(content)
+        startService(this.intent)
         splashView = findViewById(R.id.splash)
         findViewById<WVJBWebView>(R.id.webview)?.let {
             mWebView = it
@@ -127,6 +128,20 @@ class MainActivity : WebViewActivity() {
                 }
             })
         })
+        mWebView.registerHandler("signOut", WVJBWebView.WVJBHandler<Any?, Any?> { data, function ->
+            Log.i(tag, "js call signOut")
+            Log.i(tag, data.toString())
+            ClingSdk.signOut(object : OnNetworkListener {
+                override fun onSucceeded(p0: Any?, p1: Any?) {
+                    function.onResult(json(1, null, "Sign out success"))
+                }
+
+                override fun onFailed(p0: Int, p1: String?) {
+                    function.onResult(json(0, null, "Sign out fail"))
+                }
+            })
+        })
+
         // sdk sign up
         mWebView.registerHandler("signUp", WVJBWebView.WVJBHandler<Any?, Any?> { data, function ->
             Log.i(tag, "js call signUp")
@@ -153,30 +168,33 @@ class MainActivity : WebViewActivity() {
             WVJBWebView.WVJBHandler<Any?, Any?> { _, function ->
                 ClingSdk.requestUserProfile(object : OnNetworkListener {
                     override fun onSucceeded(p0: Any?, p1: Any?) {
+                        Log.i(tag, "getClingUserInfo call back success")
                         function.onResult(json(1, p0, p1.toString()))
                     }
 
                     override fun onFailed(p0: Int, p1: String?) {
+                        Log.i(tag, "getClingUserInfo call back fail")
                         function.onResult(json(1, null, p1.toString()))
                     }
                 })
             })
 
+        // connect devices
+        mWebView.registerHandler("connect", WVJBWebView.WVJBHandler<Any?, Any?> { _, function ->
+            Log.i(tag, "js call connect to cling device")
+        })
+
         // start scan devices
         mWebView.registerHandler("startScan", WVJBWebView.WVJBHandler<Any?, Any?> { _, function ->
             Log.i(tag, "js call start scanning")
-            if (!ClingSdk.isAccountBondWithCling())
-                ClingSdk.setClingDeviceType(ClingSdk.CLING_DEVICE_TYPE_ALL)
-
             ClingSdk.stopScan()
-            ClingSdk.startScan(scanTime) { o ->
-                Log.i(tag, "sssssssssssssssss")
-                if (o != null) {
-                    function.onResult(json(1, o, "scan success"))
-                }
-
+            ClingSdk.setClingDeviceType(ClingSdk.CLING_DEVICE_TYPE_ALL)
+            ClingSdk.startScan(scanTime) { p0 ->
+                Log.i(tag, p0.toString())
+                function.onResult(json(1, p0, "list devices"))
             }
         })
+
         // stop scan devices
         mWebView.registerHandler("stopScan", WVJBWebView.WVJBHandler<Any?, Any?> { _, function ->
             Log.i(tag, "js call stop scan")
@@ -186,7 +204,7 @@ class MainActivity : WebViewActivity() {
     }
 
     private fun initCling() {
-        ClingSdk.init(this, appID, appSecret, clingReady)
+        ClingSdk.init(App.getContext(), appID, appSecret, clingReady)
         ClingSdk.setBleDataListener(bleDataListener)
         ClingSdk.setDeviceConnectListener(mDeviceConnectedListener)
         ClingSdk.enableDebugMode(true)

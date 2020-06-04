@@ -166,8 +166,8 @@ open class WebViewActivity : Activity() {
         // back
         mWebView.registerHandler("back", WVJBWebView.WVJBHandler<Any?, Any?> { _, function ->
             Log.i(tag, "js call back")
-            if (mWebView!!.canGoBack()) {
-                mWebView?.goBack()
+            if (mWebView.canGoBack()) {
+                mWebView.goBack()
                 function.onResult(json(1))
             } else {
                 function.onResult(json(1))
@@ -248,9 +248,11 @@ open class WebViewActivity : Activity() {
     }
 
     override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
-        if (keyCode == KeyEvent.KEYCODE_BACK && mWebView!!.canGoBack()) {
-            mWebView?.goBack()
-            return true
+        mWebView?.let {
+            if (keyCode == KeyEvent.KEYCODE_BACK && it.canGoBack()) {
+                it.goBack()
+                return true
+            }
         }
         return super.onKeyDown(keyCode, event)
     }
