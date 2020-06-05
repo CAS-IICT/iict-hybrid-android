@@ -14,6 +14,7 @@ package com.hicling.iictcling
 import android.annotation.SuppressLint
 import android.app.Activity
 import android.app.AlertDialog
+import android.bluetooth.BluetoothAdapter
 import android.content.Intent
 import android.graphics.Color
 import android.os.Build
@@ -27,6 +28,7 @@ import android.widget.LinearLayout
 import android.widget.Toast
 import com.google.gson.Gson
 import wendu.webviewjavascriptbridge.WVJBWebView
+
 
 @SuppressLint("Registered")
 open class WebViewActivity : Activity() {
@@ -205,7 +207,8 @@ open class WebViewActivity : Activity() {
             function.onResult(json(1))
         })
         // set status bar
-        mWebView.registerHandler("setStatusBar",
+        mWebView.registerHandler(
+            "setStatusBar",
             WVJBWebView.WVJBHandler<Any?, Any?> { data, function ->
                 Log.i(tag, "js call set navbar")
                 Log.i(tag, data.toString())
@@ -228,6 +231,31 @@ open class WebViewActivity : Activity() {
             val data = Gson().fromJson(data.toString(), WebViewData::class.java)
             goWebView(data.url, data.loading)
             function.onResult(json(1, null, data.url))
+        })
+        // check bluetooth device status
+        mWebView.registerHandler("checkBle", WVJBWebView.WVJBHandler<Any?, Any?> { _, function ->
+            Log.i(tag, "js call checkBle")
+            val blueAdapter = BluetoothAdapter.getDefaultAdapter()
+            if (blueAdapter != null && blueAdapter.isEnabled) {
+                val msg = "Bluetooth is enabled"
+                Log.i(tag, msg)
+                function.onResult(json(1, null, msg))
+            } else {
+                val msg = "Bluetooth is unavailable"
+                Log.i(tag, msg)
+                function.onResult(json(0, null, msg))
+            }
+        })
+        // turn on bluetooth device
+        mWebView.registerHandler("turnOnBle", WVJBWebView.WVJBHandler<Any?, Any?> { _, function ->
+            Log.i(tag, "js call turn on Ble")
+            val blueAdapter = BluetoothAdapter.getDefaultAdapter()
+            if (blueAdapter != null) {
+                blueAdapter.enable()
+                function.onResult(json(1, null, "Ble is enabled"))
+            } else {
+                function.onResult(json(0, null, "Fail to turn on, no ble"))
+            }
         })
     }
 

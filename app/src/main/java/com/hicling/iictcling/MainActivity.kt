@@ -34,13 +34,21 @@ class MainActivity : WebViewActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(content)
-        startService(this.intent)
         splashView = findViewById(R.id.splash)
         findViewById<WVJBWebView>(R.id.webview)?.let {
             mWebView = it
             initWebView(it)
             initCling()
         }
+    }
+
+    private fun initCling() {
+        ClingSdk.init(this, appID, appSecret, clingReady)
+        ClingSdk.setBleDataListener(bleDataListener)
+        ClingSdk.setDeviceConnectListener(mDeviceConnectedListener)
+        ClingSdk.enableDebugMode(true)
+        ClingSdk.start(this)
+        startService(this.intent)
     }
 
     // sdk is ready
@@ -110,7 +118,7 @@ class MainActivity : WebViewActivity() {
 
     // these bridge functions can only used in this activity
     private fun initBridge(mWebView: WVJBWebView) {
-        Log.i(tag, "Init more functions for sdk")
+        Log.i(tag, "Init clingsdk in bridge")
         // sdk sign in
         mWebView.registerHandler("signIn", WVJBWebView.WVJBHandler<Any?, Any?> { data, function ->
             Log.i(tag, "js call signIn")
@@ -188,7 +196,7 @@ class MainActivity : WebViewActivity() {
         mWebView.registerHandler("startScan", WVJBWebView.WVJBHandler<Any?, Any?> { _, function ->
             Log.i(tag, "js call start scanning")
             ClingSdk.stopScan()
-            ClingSdk.setClingDeviceType(ClingSdk.CLING_DEVICE_TYPE_ALL)
+            ClingSdk.setClingDeviceType(ClingSdk.CLING_DEVICE_TYPE_BAND_1)
             ClingSdk.startScan(scanTime) { p0 ->
                 Log.i(tag, p0.toString())
                 function.onResult(json(1, p0, "list devices"))
@@ -201,14 +209,6 @@ class MainActivity : WebViewActivity() {
             ClingSdk.stopScan()
             function.onResult(json(1))
         })
-    }
-
-    private fun initCling() {
-        ClingSdk.init(App.getContext(), appID, appSecret, clingReady)
-        ClingSdk.setBleDataListener(bleDataListener)
-        ClingSdk.setDeviceConnectListener(mDeviceConnectedListener)
-        ClingSdk.enableDebugMode(true)
-        ClingSdk.start(this)
     }
 
 
