@@ -42,7 +42,6 @@ class MainActivity : WebViewActivity() {
     //private val appSecret: String = "92f767d18c3e843bb23e317617c55175"//个人
     override val tag: String = this.javaClass.simpleName
     private var deviceInfo: PERIPHERAL_DEVICE_INFO_CONTEXT? = null
-    private val scanTime: Int = 30 * 1000
     private var splashView: LinearLayout? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
