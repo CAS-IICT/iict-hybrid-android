@@ -6,6 +6,7 @@
     <uses-permission android:name="android.permission.BLUETOOTH" />
     <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
 
     <uses-feature
         android:name="android.hardware.bluetooth_le"
@@ -32,13 +33,14 @@
         android:supportsRtl="true"
         android:theme="@style/AppTheme"
         android:usesCleartextTraffic="true"
-        tools:targetApi="m">
+        tools:targetApi="q">
 
+        <service android:enabled="true" android:name="com.hicling.clingsdk.bleservice.ClingCommunicatorService" />
+        <service android:enabled="true" android:name="com.hicling.clingsdk.network.ClingNetWorkService" />
         <service
-            android:name="com.hicling.clingsdk.bleservice.ClingCommunicatorService"
+            android:name="com.hicling.clingsdk.systembroadcast.ClingSystemBroadcastService"
             android:enabled="true" />
-        <service android:name="com.hicling.clingsdk.network.ClingNetWorkService" />
-        <service android:name="com.hicling.clingsdk.systembroadcast.ClingSystemBroadcastService" />
+
 
         <activity android:name=".MainActivity">
             <intent-filter>
@@ -47,7 +49,7 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        <activity android:name=".WebViewActivity"></activity>
+        <activity android:name=".WebViewActivity" />
     </application>
 
 </manifest>

@@ -12,13 +12,17 @@
 package com.hicling.iictcling
 
 import android.annotation.SuppressLint
+import android.annotation.TargetApi
 import android.app.Activity
 import android.app.AlertDialog
 import android.bluetooth.BluetoothAdapter
+import android.bluetooth.le.ScanCallback
+import android.bluetooth.le.ScanResult
 import android.content.Intent
 import android.graphics.Color
 import android.os.Build
 import android.os.Bundle
+import android.os.Handler
 import android.util.Log
 import android.view.Gravity
 import android.view.KeyEvent
@@ -37,7 +41,8 @@ open class WebViewActivity : Activity() {
     open val tag: String = this.javaClass.simpleName
     private var loading: Boolean = false
     private val content: Int = R.layout.activity_webview // overridable
-    private var mWebView: WVJBWebView? = null
+    open var mWebView: WVJBWebView? = null
+    private val handler = Handler()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -163,6 +168,7 @@ open class WebViewActivity : Activity() {
     }
 
     // use to init all the bridge functions to handle js call, only for the activities which extends jsActivity
+    @TargetApi(Build.VERSION_CODES.LOLLIPOP)
     private fun initBridge(mWebView: WVJBWebView) {
         Log.i(tag, "initBridgeFunc")
         // back
@@ -235,8 +241,7 @@ open class WebViewActivity : Activity() {
         // check bluetooth device status
         mWebView.registerHandler("checkBle", WVJBWebView.WVJBHandler<Any?, Any?> { _, function ->
             Log.i(tag, "js call checkBle")
-            val blueAdapter = BluetoothAdapter.getDefaultAdapter()
-            if (blueAdapter != null && blueAdapter.isEnabled) {
+            if (checkBle()) {
                 val msg = "Bluetooth is enabled"
                 Log.i(tag, msg)
                 function.onResult(json(1, null, msg))
@@ -257,6 +262,51 @@ open class WebViewActivity : Activity() {
                 function.onResult(json(0, null, "Fail to turn on, no ble"))
             }
         })
+        mWebView.registerHandler("scanBle", WVJBWebView.WVJBHandler<Any?, Any?> { data, function ->
+            Log.i(tag, "js call scanBle")
+            Log.i(tag, data.toString())
+            val data = Gson().fromJson(data.toString(), TimeData::class.java)
+            if (checkBle()) {
+                val scanCallback = object : ScanCallback() {
+                    override fun onScanResult(callbackType: Int, result: ScanResult?) {
+                        super.onScanResult(callbackType, result)
+                        val msg = "BleScan results"
+                        Log.i(tag, msg)
+                        Log.i(tag, result.toString())
+                        function.onResult(json(1, result, msg))
+                    }
+
+                    override fun onBatchScanResults(results: MutableList<ScanResult>?) {
+                        super.onBatchScanResults(results)
+                        val msg = "Batch Scan Results"
+                        Log.i(tag, msg)
+                        Log.i(tag, results.toString())
+                        function.onResult(json(1, results, msg))
+                    }
+
+                    override fun onScanFailed(errorCode: Int) {
+                        super.onScanFailed(errorCode)
+                        val msg = "BleScan fail to scan errorCode: $errorCode"
+                        Log.i(tag, msg)
+                        Log.i(tag, errorCode.toString())
+                        function.onResult(json(0, null, msg))
+                    }
+                }
+                val scanner = BluetoothAdapter.getDefaultAdapter().bluetoothLeScanner
+                Log.i(tag, "start scan for ${data.time / 1000}s")
+                scanner.startScan(scanCallback)
+                handler.postDelayed({
+                    scanner.stopScan(scanCallback)
+                    Log.i(tag, "stop scan ble")
+                }, data.time)
+            }
+        })
+    }
+
+    private fun checkBle(): Boolean {
+        val blueAdapter = BluetoothAdapter.getDefaultAdapter()
+        return blueAdapter != null && blueAdapter.isEnabled
+
     }
 
     // go to other activity
@@ -275,14 +325,31 @@ open class WebViewActivity : Activity() {
         else modal.visibility = View.INVISIBLE
     }
 
+    private var isExit = 0
     override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
-        mWebView?.let {
-            if (keyCode == KeyEvent.KEYCODE_BACK && it.canGoBack()) {
-                it.goBack()
-                return true
+        Log.i(tag, "on key down")
+        if (keyCode == KeyEvent.KEYCODE_BACK) {
+            return if (mWebView!!.canGoBack()) {
+                Log.i(tag, "webview go back")
+                mWebView?.goBack()
+                true
+            } else {
+                Log.i(tag, "Activity cant go back")
+                isExit++
+                exit()
+                false
             }
         }
         return super.onKeyDown(keyCode, event)
+    }
+
+    private fun exit() {
+        if (isExit < 2) {
+            Toast.makeText(applicationContext, R.string.exit, Toast.LENGTH_SHORT).show()
+            handler.postDelayed({ isExit-- }, 2000L)
+        } else {
+            this.finish()
+        }
     }
 
 }

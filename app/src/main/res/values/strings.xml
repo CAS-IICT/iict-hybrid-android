@@ -1,4 +1,12 @@
 <resources>
     <string name="app_name">Virus tracking</string>
     <string name="confirm">Confirm</string>
+    <string name="request">Request</string>
+    <string name="exit">Press twice will shut down the app!</string>
+    <string name="open_permission_req">You need to open the permissions to use this App!</string>
+    <string name="TEXT_SERVICE_COMMUNICATOR" translatable="false">Cling Comm Service</string>
+    <string name="TEXT_SERVICE_LOCATION" translatable="false">Cling Location Service</string>
+    <string name="TEXT_SERVICE_NETWORK" translatable="false">Cling Network Service</string>
+    <string name="TEXT_SERVICE_NOTIFICATION" translatable="false">Cling Notification Service</string>
+    <string name="TEXT_SERVICE_SYSTEM" translatable="false">Cling System Service</string>
 </resources>

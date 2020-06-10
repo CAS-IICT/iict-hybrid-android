@@ -6,39 +6,55 @@
  */
 package com.hicling.iictcling
 
+import android.Manifest
+import android.app.AlertDialog
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.net.Uri
+import android.os.Build
 import android.os.Bundle
+import android.provider.Settings
 import android.util.Log
 import android.view.View
 import android.widget.LinearLayout
 import com.google.gson.Gson
 import com.hicling.clingsdk.ClingSdk
 import com.hicling.clingsdk.devicemodel.PERIPHERAL_DEVICE_INFO_CONTEXT
+import com.hicling.clingsdk.listener.OnBleListener
 import com.hicling.clingsdk.listener.OnBleListener.OnBleDataListener
 import com.hicling.clingsdk.listener.OnBleListener.OnDeviceConnectedListener
 import com.hicling.clingsdk.listener.OnNetworkListener
 import com.hicling.clingsdk.listener.OnSdkReadyListener
 import com.hicling.clingsdk.model.DayTotalDataModel
 import wendu.webviewjavascriptbridge.WVJBWebView
+import wendu.webviewjavascriptbridge.WVJBWebView.WVJBHandler
+
 
 class MainActivity : WebViewActivity() {
     override var url: String = "http://192.168.1.79:8080"
+    //override var url: String = "http://192.168.1.103:8080" //前端
+
     private var content: Int = R.layout.activity_main
-    private val appID: String = "HCd176b8b47b3ed84c"
-    private val appSecret: String = "92f767d18c3e843bb23e317617c55175"
+    private val appID: String = "HCe0f4ae28e21efffd"//企业
+    private val appSecret: String = "9a3438f7b77968c4524b1a427cd80522"//企业
+
+    //private val appID: String = "HCd176b8b47b3ed84c"//个人
+    //private val appSecret: String = "92f767d18c3e843bb23e317617c55175"//个人
     override val tag: String = this.javaClass.simpleName
     private var deviceInfo: PERIPHERAL_DEVICE_INFO_CONTEXT? = null
-    private val scanTime: Int = 15000
+    private val scanTime: Int = 30 * 1000
     private var splashView: LinearLayout? = null
-    private var mWebView: WVJBWebView? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(content)
         splashView = findViewById(R.id.splash)
+        getBlePermission()
         findViewById<WVJBWebView>(R.id.webview)?.let {
             mWebView = it
             initWebView(it)
             initCling()
+            initBridge(it)
         }
     }
 
@@ -48,7 +64,6 @@ class MainActivity : WebViewActivity() {
         ClingSdk.setDeviceConnectListener(mDeviceConnectedListener)
         ClingSdk.enableDebugMode(true)
         ClingSdk.start(this)
-        startService(this.intent)
     }
 
     // sdk is ready
@@ -56,9 +71,6 @@ class MainActivity : WebViewActivity() {
         override fun onClingSdkReady() {
             Log.i(tag, "SDK is ready")
             // init bridge functions related to sdk after success
-            mWebView?.let {
-                initBridge(it)
-            }
         }
 
         override fun onFailed(p0: String?) {
@@ -84,7 +96,9 @@ class MainActivity : WebViewActivity() {
             Log.i(tag, "onDataSyncingMinuteData is: $o") //MinuteData
         }
 
-        override fun onGetDayTotalData(dayTotalDataModel: DayTotalDataModel?) {}
+        override fun onGetDayTotalData(dayTotalDataModel: DayTotalDataModel?) {
+            Log.i(tag, "getDayTotalData") //MinuteData
+        }
     }
 
     private val mDeviceConnectedListener = object : OnDeviceConnectedListener {
@@ -120,7 +134,7 @@ class MainActivity : WebViewActivity() {
     private fun initBridge(mWebView: WVJBWebView) {
         Log.i(tag, "Init clingsdk in bridge")
         // sdk sign in
-        mWebView.registerHandler("signIn", WVJBWebView.WVJBHandler<Any?, Any?> { data, function ->
+        mWebView.registerHandler("signIn", WVJBHandler<Any?, Any?> { data, function ->
             Log.i(tag, "js call signIn")
             Log.i(tag, data.toString())
             val data = Gson().fromJson(data.toString(), SignInData::class.java)
@@ -136,7 +150,7 @@ class MainActivity : WebViewActivity() {
                 }
             })
         })
-        mWebView.registerHandler("signOut", WVJBWebView.WVJBHandler<Any?, Any?> { data, function ->
+        mWebView.registerHandler("signOut", WVJBHandler<Any?, Any?> { data, function ->
             Log.i(tag, "js call signOut")
             Log.i(tag, data.toString())
             ClingSdk.signOut(object : OnNetworkListener {
@@ -151,7 +165,7 @@ class MainActivity : WebViewActivity() {
         })
 
         // sdk sign up
-        mWebView.registerHandler("signUp", WVJBWebView.WVJBHandler<Any?, Any?> { data, function ->
+        mWebView.registerHandler("signUp", WVJBHandler<Any?, Any?> { data, function ->
             Log.i(tag, "js call signUp")
             Log.i(tag, data.toString())
             val data = Gson().fromJson(data.toString(), SignUpData::class.java)
@@ -173,7 +187,7 @@ class MainActivity : WebViewActivity() {
         })
         mWebView.registerHandler(
             "getClingUserInfo",
-            WVJBWebView.WVJBHandler<Any?, Any?> { _, function ->
+            WVJBHandler<Any?, Any?> { _, function ->
                 ClingSdk.requestUserProfile(object : OnNetworkListener {
                     override fun onSucceeded(p0: Any?, p1: Any?) {
                         Log.i(tag, "getClingUserInfo call back success")
@@ -188,26 +202,30 @@ class MainActivity : WebViewActivity() {
             })
 
         // connect devices
-        mWebView.registerHandler("connect", WVJBWebView.WVJBHandler<Any?, Any?> { _, function ->
+        mWebView.registerHandler("connect", WVJBHandler<Any?, Any?> { _, function ->
             Log.i(tag, "js call connect to cling device")
         })
 
         // start scan devices
-        mWebView.registerHandler("startScan", WVJBWebView.WVJBHandler<Any?, Any?> { _, function ->
+        mWebView.registerHandler("startScan", WVJBHandler<Any?, Any?> { data, function ->
             Log.i(tag, "js call start scanning")
             ClingSdk.stopScan()
-            ClingSdk.setClingDeviceType(ClingSdk.CLING_DEVICE_TYPE_BAND_1)
-            ClingSdk.startScan(scanTime) { p0 ->
-                Log.i(tag, p0.toString())
-                function.onResult(json(1, p0, "list devices"))
-            }
+            ClingSdk.setClingDeviceType(ClingSdk.CLING_DEVICE_TYPE_ALL)
+            Log.i(tag, data.toString())
+            val data = Gson().fromJson(data.toString(), TimeData::class.java)
+            ClingSdk.startScan(data.time.toInt(), object : OnBleListener.OnScanDeviceListener {
+                override fun onBleScanUpdated(obj: Any?) {
+                    Log.i(tag, obj.toString())
+                    function.onResult(json(1, obj, "list devices"))
+                }
+            })
         })
 
         // stop scan devices
-        mWebView.registerHandler("stopScan", WVJBWebView.WVJBHandler<Any?, Any?> { _, function ->
+        mWebView.registerHandler("stopScan", WVJBHandler<Any?, Any?> { _, function ->
             Log.i(tag, "js call stop scan")
             ClingSdk.stopScan()
-            function.onResult(json(1))
+            function.onResult(json(1, null, "stop scan"))
         })
     }
 
@@ -228,6 +246,74 @@ class MainActivity : WebViewActivity() {
         Log.i(tag, "onPause()")
         ClingSdk.onPause(this)
         super.onPause()
+    }
+
+
+    /**
+     * 解决：无法发现蓝牙设备的问题
+     */
+    private val accessCode = 101
+    private val permissions: Array<String> = arrayOf(
+        Manifest.permission.ACCESS_FINE_LOCATION,
+        Manifest.permission.ACCESS_COARSE_LOCATION
+    )
+    private var countRequest = 0
+
+    // get bluetooth permission
+    private fun getBlePermission() {
+        countRequest++
+        if (Build.VERSION.SDK_INT > Build.VERSION_CODES.M) {
+            var permissionCheck = checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION)
+            permissionCheck += checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION)
+            if (permissionCheck != PackageManager.PERMISSION_GRANTED) {
+                requestPermissions(permissions, accessCode)
+            }
+        }
+    }
+
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        when (requestCode) {
+            accessCode -> if (checkPermission(grantResults)) {
+                Log.i(tag, "onRequestPermissionsResult: 用户允许权限 accessCode:$accessCode")
+            } else {
+                Log.i(tag, "onRequestPermissionsResult: 拒绝搜索设备权限 accessCode:$accessCode")
+                if (countRequest > 2) {
+                    // ask User to grant permission manually
+                    AlertDialog.Builder(this)
+                        .setMessage(R.string.open_permission_req)
+                        .setTitle(R.string.request)
+                        .setPositiveButton(R.string.confirm) { _, _ ->
+                            goIntentSetting()
+                        }.create().show()
+                } else getBlePermission()
+            }
+        }
+    }
+
+    private fun checkPermission(grantResults: IntArray): Boolean {
+        for (grantResult in grantResults) {
+            if (grantResult == PackageManager.PERMISSION_DENIED) {
+                return false
+            }
+        }
+        return true
+    }
+
+    // open app settings let user grant the permission
+    private fun goIntentSetting() {
+        val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
+        val uri: Uri = Uri.fromParts("package", this.packageName, null)
+        intent.data = uri
+        try {
+            this.startActivity(intent)
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
     }
 
 }

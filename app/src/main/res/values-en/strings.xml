@@ -2,4 +2,7 @@
 <resources>
     <string name="app_name">Virus Tracking</string>
     <string name="confirm">Confirm</string>
+    <string name="request">Request</string>
+    <string name="exit">Press twice will shut down the app!</string>
+    <string name="open_permission_req">You need to open the permissions to use this App!</string>
 </resources>

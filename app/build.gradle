@@ -1,15 +1,14 @@
 apply plugin: 'com.android.application'
 apply plugin: 'kotlin-android'
-apply plugin: 'kotlin-android-extensions'
 
 android {
-    compileSdkVersion 29
-    buildToolsVersion "29.0.3"
+    compileSdkVersion 26
+    buildToolsVersion "26.0.3"
 
     defaultConfig {
         applicationId "com.hicling.iictcling"
         minSdkVersion 18
-        targetSdkVersion 29
+        targetSdkVersion 26
         versionCode 1
         versionName "1.0"
         testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
@@ -45,6 +44,5 @@ dependencies {
     implementation "org.jetbrains.kotlin:kotlin-stdlib:${kotlin_version}"
     implementation fileTree(dir: 'src/main/jniLibs', include: ['*.aar', '*.jar'], exclude: [])
     testImplementation 'junit:junit:4.13'
-    implementation 'com.google.code.gson:gson:2.8.6'
     implementation 'com.wang.avi:library:2.1.3'
 }

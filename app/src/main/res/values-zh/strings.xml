@@ -2,4 +2,7 @@
 <resources>
     <string name="app_name">疫情追踪</string>
     <string name="confirm">确定</string>
+    <string name="request">要求</string>
+    <string name="exit">再次点击将退出应用</string>
+    <string name="open_permission_req">请打开相应的权限使用应用!</string>
 </resources>
