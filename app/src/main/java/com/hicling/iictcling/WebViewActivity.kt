@@ -13,7 +13,6 @@ package com.hicling.iictcling
 
 import android.annotation.SuppressLint
 import android.annotation.TargetApi
-import android.app.Activity
 import android.app.AlertDialog
 import android.bluetooth.BluetoothAdapter
 import android.bluetooth.le.ScanCallback
@@ -23,6 +22,7 @@ import android.graphics.Color
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
+import android.support.v4.app.FragmentActivity
 import android.util.Log
 import android.view.Gravity
 import android.view.KeyEvent
@@ -31,11 +31,12 @@ import android.webkit.*
 import android.widget.LinearLayout
 import android.widget.Toast
 import com.google.gson.Gson
+import net.vidageek.mirror.dsl.Mirror
 import wendu.webviewjavascriptbridge.WVJBWebView
 
 
 @SuppressLint("Registered")
-open class WebViewActivity : Activity() {
+open class WebViewActivity : FragmentActivity() {
 
     open var url: String = ""
     open val tag: String = this.javaClass.simpleName

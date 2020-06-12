@@ -21,8 +21,10 @@
         tools:ignore="ProtectedPermissions" />
     <uses-permission android:name="android.permission.RECEIVE_SMS" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
-    <uses-permission android:name="android.permission.CHANGE_WIFI_STATE" />
+    <uses-permission android:name="android.permission.CHANandroid.permission.LOCAL_MAC_ADDRESSGE_WIFI_STATE" />
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+    <permission android:name="android.permission.ACCESS_WIFI_STATE" />
+    <permission android:name="android.permission.CHANGE_WIFI_STATE" />
 
     <application
         android:name=".App"
@@ -32,20 +34,16 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/AppTheme"
-        android:usesCleartextTraffic="true"
-        tools:targetApi="q">
+        android:usesCleartextTraffic="true">
 
         <service android:enabled="true" android:name="com.hicling.clingsdk.bleservice.ClingCommunicatorService" />
         <service android:enabled="true" android:name="com.hicling.clingsdk.network.ClingNetWorkService" />
-        <service
-            android:name="com.hicling.clingsdk.systembroadcast.ClingSystemBroadcastService"
-            android:enabled="true" />
+        <service android:enabled="true" android:name="com.hicling.clingsdk.systembroadcast.ClingSystemBroadcastService"/>
 
 
         <activity android:name=".MainActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
-
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>

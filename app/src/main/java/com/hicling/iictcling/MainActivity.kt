@@ -26,6 +26,7 @@ import com.hicling.clingsdk.listener.OnBleListener.OnDeviceConnectedListener
 import com.hicling.clingsdk.listener.OnNetworkListener
 import com.hicling.clingsdk.listener.OnSdkReadyListener
 import com.hicling.clingsdk.model.DayTotalDataModel
+import com.hicling.clingsdk.systembroadcast.ClingSystemBroadcastService
 import wendu.webviewjavascriptbridge.WVJBWebView
 import wendu.webviewjavascriptbridge.WVJBWebView.WVJBHandler
 
@@ -49,6 +50,8 @@ class MainActivity : WebViewActivity() {
         setContentView(content)
         splashView = findViewById(R.id.splash)
         getBlePermission()
+        //开始绑定
+        //开始绑定
         findViewById<WVJBWebView>(R.id.webview)?.let {
             mWebView = it
             initWebView(it)
