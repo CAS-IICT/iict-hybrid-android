@@ -30,8 +30,8 @@ import wendu.webviewjavascriptbridge.WVJBWebView.WVJBHandler
 
 
 class MainActivity : WebViewActivity() {
-    override var url = "http://192.168.1.79:8080"
-    //override var url: String = "http://192.168.1.103:8080" //前端
+    //override var url = "http://192.168.1.79:8080"
+    override var url = "http://192.168.1.103:8080" //前端
     private var deviceInfo: PERIPHERAL_DEVICE_INFO_CONTEXT? = null
     private var splashView: LinearLayout? = null
 

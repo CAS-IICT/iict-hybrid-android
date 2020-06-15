@@ -1,20 +1,115 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Error</title>
-    <style>
-html{
-    font:
-}
-body{
-    text-align:center;
-}
-    </style>
-</head>
-<body>
-    <h1>404 not found</h1>
-    <p>哎呀呀，网络连接好像出现了点问题，清刷新重试哦！</p>
-    <p>The website is not available, please check your network and try to refresh!</p>
-</body>
+    <head>
+        <meta charset="utf-8" />
+        <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+        <meta
+            name="viewport"
+            content="initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no, width=device-width, viewport-fit=cover"
+        />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="black" />
+        <meta name="format-detection" content="telephone=no" />
+        <!--QQ全屏、应用模式-->
+        <meta name="x5-fullscreen" content="true" />
+        <meta name="x5-page-mode" content="app" />
+        <!--UC全屏、应用模式-->
+        <meta name="full-screen" content="yes" />
+        <meta name="browsermode" content="application" />
+        <script>
+            var URL = 'http://192.168.1.103:8080'
+            window.onload = function () {
+                document.getElementById('refresh').onclick = function () {
+                    location.replace(URL)
+                }
+            }
+        </script>
+
+        <title>Error</title>
+        <style>
+            html {
+                font: Arial;
+                overflow: hidden;
+                width: 100%;
+            }
+            body {
+                padding: 0 5%;
+                padding-top: 33%;
+                text-align: center;
+                font-size: 100%;
+            }
+            body img {
+                width: 80%;
+            }
+            .rkmd-btn.btn-lightBlue {
+                color: #fff;
+                background-color: #828282;
+            }
+            .rkmd-btn {
+                margin-top: 5%;
+                display: inline-block;
+                position: relative;
+                cursor: pointer;
+                height: 35px;
+                line-height: 35px;
+                padding: 0 1.5rem;
+                color: #424242;
+                font-size: 15px;
+                font-weight: 600;
+                font-family: 'Roboto', sans-serif;
+                letter-spacing: 0.8px;
+                text-align: center;
+                text-decoration: none;
+                text-transform: uppercase;
+                vertical-align: middle;
+                white-space: nowrap;
+                outline: none;
+                border: none;
+                -webkit-user-select: none;
+                -moz-user-select: none;
+                -ms-user-select: none;
+                user-select: none;
+                border-radius: 2px;
+                -webkit-transition: all 0.3s ease-out;
+                transition: all 0.3s ease-out;
+                box-shadow: 0 2px 5px 0 rgba(0, 0, 0, 0.225);
+            }
+            *,
+            *::after,
+            *::before {
+                -ms-box-sizing: border-box;
+                -o-box-sizing: border-box;
+                box-sizing: border-box;
+            }
+            button {
+                -webkit-appearance: button;
+                text-rendering: auto;
+                color: -internal-light-dark-color(buttontext, rgb(170, 170, 170));
+                letter-spacing: normal;
+                word-spacing: normal;
+                text-transform: none;
+                text-indent: 0px;
+                text-shadow: none;
+                display: inline-block;
+                text-align: center;
+                align-items: flex-start;
+                cursor: default;
+                background-color: -internal-light-dark-color(rgb(239, 239, 239), rgb(74, 74, 74));
+                box-sizing: border-box;
+                margin: 0em;
+                font: 400 13.3333px Arial;
+                padding: 1px 6px;
+                border-width: 2px;
+                border-style: outset;
+                border-color: -internal-light-dark-color(rgb(118, 118, 118), rgb(195, 195, 195));
+                border-image: initial;
+            }
+        </style>
+    </head>
+    <body>
+        <img src="./404.jpg" alt="" />
+        <p>哎呀呀，网页好像出现了点问题！</p>
+        <p>Oops, the website is not available!</p>
+        <button class="rkmd-btn btn-lightBlue" id="refresh">Refresh</button>
+    </body>
 </html>

@@ -31,19 +31,20 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/AppTheme"
-        android:usesCleartextTraffic="true">
+        android:usesCleartextTraffic="true"
+        tools:targetApi="m">
 
         <service android:name="com.hicling.clingsdk.bleservice.ClingCommunicatorService" />
         <service android:name="com.hicling.clingsdk.network.ClingNetWorkService" />
         <service android:name="com.hicling.clingsdk.systembroadcast.ClingSystemBroadcastService" android:enabled="true" />
 
-        <activity android:name=".MainActivity">
+        <activity android:name=".MainActivity" android:screenOrientation="portrait">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        <activity android:name=".WebViewActivity" />
+        <activity android:name=".WebViewActivity" android:screenOrientation="portrait"/>
     </application>
 
 </manifest>
