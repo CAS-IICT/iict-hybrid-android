@@ -11,17 +11,24 @@
 
 package com.hicling.iictcling
 
+import android.Manifest
 import android.annotation.SuppressLint
 import android.annotation.TargetApi
 import android.app.AlertDialog
 import android.bluetooth.BluetoothAdapter
 import android.bluetooth.le.ScanCallback
 import android.bluetooth.le.ScanResult
+import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.graphics.Color
+import android.location.Geocoder
+import android.location.LocationManager
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
+import android.provider.Settings
 import android.support.v4.app.FragmentActivity
 import android.util.Log
 import android.view.Gravity
@@ -30,8 +37,9 @@ import android.view.View
 import android.webkit.*
 import android.widget.LinearLayout
 import android.widget.Toast
+import com.amap.api.location.AMapLocationClient
+import com.amap.api.location.AMapLocationClientOption
 import com.google.gson.Gson
-import net.vidageek.mirror.dsl.Mirror
 import wendu.webviewjavascriptbridge.WVJBWebView
 
 
@@ -47,6 +55,7 @@ open class WebViewActivity : FragmentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        getPermission()
         val bundle = this.intent.extras
         bundle?.getBoolean("loading")?.let { loading = it }
         // 当有url传入的时候在本类中直接调用initWebView，该类一般不被继承了
@@ -156,19 +165,22 @@ open class WebViewActivity : FragmentActivity() {
     }
 
     open fun onLoadError() {
+        Log.i(tag, "register refresh error page: $url")
+        mWebView?.registerHandler(
+            "refreshErrorPage",
+            WVJBWebView.WVJBHandler<Any?, Any?> { _, function ->
+                function.onResult(json(1, url, "refresh the error page"))
+            })
         showLoading(false)
     }
 
     // give standard response as JSON to frontend
-    open fun json(status: Int, data: Any? = null, msg: String = ""): String {
-        var obj: String? = null
-        if (data != null) {
-            obj = Gson().toJson(data)
-        }
-        return Gson().toJson(ResData(status, obj, msg))
+    open fun json(status: Int, data: Any? = null, msg: String? = ""): String {
+        return Gson().toJson(ResData(status, data, msg))
     }
 
     // use to init all the bridge functions to handle js call, only for the activities which extends jsActivity
+    @SuppressLint("MissingPermission")
     @TargetApi(Build.VERSION_CODES.LOLLIPOP)
     private fun initBridge(mWebView: WVJBWebView) {
         Log.i(tag, "initBridgeFunc")
@@ -302,6 +314,96 @@ open class WebViewActivity : FragmentActivity() {
                 }, data.time)
             }
         })
+        // get location position, 1表示安卓原生定位，2表示高德定位
+        mWebView.registerHandler("location", WVJBWebView.WVJBHandler<Any?, Any?> { data, function ->
+            Log.i(tag, "js call get location")
+            Log.i(tag, data.toString())
+            val data = Gson().fromJson(data.toString(), LocType::class.java)
+            if (data.type == 2) { //高德
+                val mLocationClient = AMapLocationClient(applicationContext)
+                val mLocationOption = AMapLocationClientOption()
+                mLocationOption.locationMode =
+                    AMapLocationClientOption.AMapLocationMode.Hight_Accuracy
+                mLocationOption.locationMode =
+                    AMapLocationClientOption.AMapLocationMode.Battery_Saving
+                mLocationOption.isOnceLocation = true
+                mLocationOption.isOnceLocationLatest = true
+                mLocationClient.setLocationOption(mLocationOption)
+                mLocationClient.stopLocation()
+                mLocationClient.startLocation()
+                mLocationClient.setLocationListener {
+                    Log.i(tag, it.toString())
+                    val data = LocData(
+                        it.longitude,
+                        it.latitude,
+                        it.altitude,
+                        it.provider,
+                        it.speed,
+                        it.time,
+                        it.province,
+                        null,
+                        it.country,
+                        it.adCode,
+                        it.city,
+                        it.district,
+                        it.cityCode,
+                        it.address,
+                        it.street,
+                        it.streetNum
+                    )
+                    function.onResult(json(1, data, "GaoDe get location"))
+                }
+            } else { //原生定位
+                val locationManager =
+                    this.getSystemService(Context.LOCATION_SERVICE) as LocationManager
+                val providers: List<String> = locationManager.getProviders(true)
+                var locationProvider: String? = null
+                // through GPS
+                val msg: String
+                when {
+                    providers.contains(LocationManager.GPS_PROVIDER) -> {
+                        msg = "GPS get location"
+                        Log.i(tag, msg)
+                        locationProvider = LocationManager.GPS_PROVIDER
+                    }
+                    // through network
+                    providers.contains(LocationManager.NETWORK_PROVIDER) -> {
+                        msg = "network get location"
+                        Log.i(tag, msg)
+                        //如果是Network
+                        locationProvider = LocationManager.NETWORK_PROVIDER
+                    }
+                    else -> {
+                        msg = "location is not available"
+                        val i = Intent()
+                        i.action = Settings.ACTION_LOCATION_SOURCE_SETTINGS
+                        this.startActivity(i)
+                    }
+                }
+                if (locationProvider != null) {
+                    val location = locationManager.getLastKnownLocation(locationProvider)
+                    val addList =
+                        Geocoder(this).getFromLocation(location.latitude, location.longitude, 1)
+                    val data = LocData(
+                        location.longitude,
+                        location.latitude,
+                        location.altitude,
+                        location.provider,
+                        location.speed,
+                        location.time,
+                        addList[0].adminArea,
+                        addList[0].countryCode,
+                        addList[0].countryName,
+                        addList[0].postalCode,
+                        addList[0].locality,
+                        addList[0].subLocality
+                    )
+                    function.onResult(json(1, data, msg))
+                } else {
+                    function.onResult(json(0, null, msg))
+                }
+            }
+        })
     }
 
     private fun checkBle(): Boolean {
@@ -311,7 +413,7 @@ open class WebViewActivity : FragmentActivity() {
     }
 
     // go to other activity
-    private fun goWebView(url: String, loading: Boolean = false) {
+    private fun goWebView(url: String?, loading: Boolean = false) {
         val intent = Intent(this, WebViewActivity::class.java)
         val bundle = Bundle()
         bundle.putString("url", url)
@@ -353,5 +455,83 @@ open class WebViewActivity : FragmentActivity() {
         }
     }
 
+    /**
+     * 解决：android>6，定位等权限，蓝牙问题
+     */
+    private val accessCode = 102
+    private val permissions: Array<String> = arrayOf(
+        Manifest.permission.BLUETOOTH,
+        Manifest.permission.BLUETOOTH_ADMIN,
+        Manifest.permission.INTERNET,
+        Manifest.permission.READ_PHONE_STATE,
+        Manifest.permission.WRITE_EXTERNAL_STORAGE,
+        Manifest.permission.READ_EXTERNAL_STORAGE,
+        Manifest.permission.MOUNT_UNMOUNT_FILESYSTEMS,
+        Manifest.permission.RECEIVE_SMS,
+        Manifest.permission.ACCESS_NETWORK_STATE,
+        Manifest.permission.ACCESS_WIFI_STATE,
+        Manifest.permission.CHANGE_WIFI_STATE,
+        Manifest.permission.ACCESS_FINE_LOCATION,
+        Manifest.permission.ACCESS_COARSE_LOCATION,
+        Manifest.permission.CHANGE_NETWORK_STATE
+    )
+    private var countRequest = 0
+
+    // get bluetooth permission
+    private fun getPermission() {
+        countRequest++
+        if (Build.VERSION.SDK_INT > Build.VERSION_CODES.M) {
+            var permissionCheck = checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION)
+            permissionCheck += checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION)
+            if (permissionCheck != PackageManager.PERMISSION_GRANTED) {
+                requestPermissions(permissions, accessCode)
+            }
+        }
+    }
+
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        when (requestCode) {
+            accessCode -> if (checkPermission(grantResults)) {
+                Log.i(tag, "onRequestPermissionsResult: 用户允许权限 accessCode:$accessCode")
+            } else {
+                Log.i(tag, "onRequestPermissionsResult: 拒绝搜索设备权限 accessCode:$accessCode")
+                if (countRequest > 2) {
+                    // ask User to grant permission manually
+                    AlertDialog.Builder(this)
+                        .setMessage(R.string.open_permission_req)
+                        .setTitle(R.string.request)
+                        .setPositiveButton(R.string.confirm) { _, _ ->
+                            goIntentSetting()
+                        }.create().show()
+                } else getPermission()
+            }
+        }
+    }
+
+    private fun checkPermission(grantResults: IntArray): Boolean {
+        for (grantResult in grantResults) {
+            if (grantResult == PackageManager.PERMISSION_DENIED) {
+                return false
+            }
+        }
+        return true
+    }
+
+    // open app settings let user grant the permission
+    private fun goIntentSetting() {
+        val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
+        val uri: Uri = Uri.fromParts("package", this.packageName, null)
+        intent.data = uri
+        try {
+            this.startActivity(intent)
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
 }
 

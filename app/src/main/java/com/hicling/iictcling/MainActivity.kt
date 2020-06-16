@@ -7,14 +7,7 @@
 package com.hicling.iictcling
 
 import com.hicling.clingsdk.ClingSdk
-import android.Manifest
-import android.app.AlertDialog
-import android.content.Intent
-import android.content.pm.PackageManager
-import android.net.Uri
-import android.os.Build
 import android.os.Bundle
-import android.provider.Settings
 import android.util.Log
 import android.view.View
 import android.widget.LinearLayout
@@ -30,8 +23,8 @@ import wendu.webviewjavascriptbridge.WVJBWebView.WVJBHandler
 
 
 class MainActivity : WebViewActivity() {
-    //override var url = "http://192.168.1.79:8080"
-    override var url = "http://192.168.1.103:8080" //前端
+    override var url = "http://192.168.1.79:8080"
+    //override var url = "http://192.168.1.103:8080" //前端
     private var deviceInfo: PERIPHERAL_DEVICE_INFO_CONTEXT? = null
     private var splashView: LinearLayout? = null
 
@@ -47,7 +40,6 @@ class MainActivity : WebViewActivity() {
         super.onCreate(savedInstanceState)
         setContentView(content)
         splashView = findViewById(R.id.splash)
-        getBlePermission()
         findViewById<WVJBWebView>(R.id.webview)?.let {
             mWebView = it
             initWebView(it)
@@ -180,7 +172,7 @@ class MainActivity : WebViewActivity() {
             ClingSdk.signUp(
                 data.username,
                 data.password,
-                data.repassword,
+                data.rePassword,
                 object : OnNetworkListener {
                     override fun onSucceeded(p0: Any?, p1: Any?) {
                         Log.i(tag, "Sign up successfully")
@@ -255,86 +247,6 @@ class MainActivity : WebViewActivity() {
         Log.i(tag, "onPause()")
         ClingSdk.onPause(this)
         super.onPause()
-    }
-
-
-    /**
-     * 解决：无法发现蓝牙设备的问题
-     */
-    private val accessCode = 102
-    private val permissions: Array<String> = arrayOf(
-        Manifest.permission.BLUETOOTH,
-        Manifest.permission.BLUETOOTH_ADMIN,
-        Manifest.permission.INTERNET,
-        Manifest.permission.READ_PHONE_STATE,
-        Manifest.permission.WRITE_EXTERNAL_STORAGE,
-        Manifest.permission.READ_EXTERNAL_STORAGE,
-        Manifest.permission.MOUNT_UNMOUNT_FILESYSTEMS,
-        Manifest.permission.RECEIVE_SMS,
-        Manifest.permission.ACCESS_NETWORK_STATE,
-        Manifest.permission.ACCESS_WIFI_STATE,
-        Manifest.permission.CHANGE_WIFI_STATE,
-        Manifest.permission.ACCESS_FINE_LOCATION,
-        Manifest.permission.ACCESS_COARSE_LOCATION,
-        Manifest.permission.CHANGE_NETWORK_STATE
-    )
-    private var countRequest = 0
-
-    // get bluetooth permission
-    private fun getBlePermission() {
-        countRequest++
-        if (Build.VERSION.SDK_INT > Build.VERSION_CODES.M) {
-            var permissionCheck = checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION)
-            permissionCheck += checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION)
-            if (permissionCheck != PackageManager.PERMISSION_GRANTED) {
-                requestPermissions(permissions, accessCode)
-            }
-        }
-    }
-
-    override fun onRequestPermissionsResult(
-        requestCode: Int,
-        permissions: Array<out String>,
-        grantResults: IntArray
-    ) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        when (requestCode) {
-            accessCode -> if (checkPermission(grantResults)) {
-                Log.i(tag, "onRequestPermissionsResult: 用户允许权限 accessCode:$accessCode")
-            } else {
-                Log.i(tag, "onRequestPermissionsResult: 拒绝搜索设备权限 accessCode:$accessCode")
-                if (countRequest > 2) {
-                    // ask User to grant permission manually
-                    AlertDialog.Builder(this)
-                        .setMessage(R.string.open_permission_req)
-                        .setTitle(R.string.request)
-                        .setPositiveButton(R.string.confirm) { _, _ ->
-                            goIntentSetting()
-                        }.create().show()
-                } else getBlePermission()
-            }
-        }
-    }
-
-    private fun checkPermission(grantResults: IntArray): Boolean {
-        for (grantResult in grantResults) {
-            if (grantResult == PackageManager.PERMISSION_DENIED) {
-                return false
-            }
-        }
-        return true
-    }
-
-    // open app settings let user grant the permission
-    private fun goIntentSetting() {
-        val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
-        val uri: Uri = Uri.fromParts("package", this.packageName, null)
-        intent.data = uri
-        try {
-            this.startActivity(intent)
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
     }
 
 }

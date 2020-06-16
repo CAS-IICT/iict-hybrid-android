@@ -16,11 +16,34 @@
         <!--UC全屏、应用模式-->
         <meta name="full-screen" content="yes" />
         <meta name="browsermode" content="application" />
+        <script src="https://cdn.bootcdn.net/ajax/libs/vConsole/3.3.4/vconsole.min.js"></script>
         <script>
-            var URL = 'http://192.168.1.103:8080'
+            var vConsole = new VConsole()
+            function setupWebViewJavascriptBridge(callback) {
+                if (window.WebViewJavascriptBridge) {
+                    return callback(window.WebViewJavascriptBridge)
+                } else {
+                    document.addEventListener(
+                        'WebViewJavascriptBridgeReady',
+                        function () {
+                            return callback(window.WebViewJavascriptBridge)
+                        },
+                        false
+                    )
+                }
+                setTimeout(() => {
+                    if (!window.WebViewJavascriptBridge)
+                        console.error('Not native environment available, fail to init JSBridge')
+                }, 3000)
+            }
             window.onload = function () {
                 document.getElementById('refresh').onclick = function () {
-                    location.replace(URL)
+                    setupWebViewJavascriptBridge(function (bridge) {
+                        bridge.callHandler('refreshErrorPage', function (res) {
+                            res = JSON.parse(res)
+                            location.replace(res.data)
+                        })
+                    })
                 }
             }
         </script>
