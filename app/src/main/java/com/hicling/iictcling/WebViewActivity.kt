@@ -39,6 +39,10 @@ import android.widget.LinearLayout
 import android.widget.Toast
 import com.amap.api.location.AMapLocationClient
 import com.amap.api.location.AMapLocationClientOption
+import com.amap.api.services.weather.LocalWeatherForecastResult
+import com.amap.api.services.weather.LocalWeatherLiveResult
+import com.amap.api.services.weather.WeatherSearch
+import com.amap.api.services.weather.WeatherSearchQuery
 import com.google.gson.Gson
 import wendu.webviewjavascriptbridge.WVJBWebView
 
@@ -180,6 +184,7 @@ open class WebViewActivity : FragmentActivity() {
     }
 
     // use to init all the bridge functions to handle js call, only for the activities which extends jsActivity
+    @Suppress("RECEIVER_NULLABILITY_MISMATCH_BASED_ON_JAVA_ANNOTATIONS")
     @SuppressLint("MissingPermission")
     @TargetApi(Build.VERSION_CODES.LOLLIPOP)
     private fun initBridge(mWebView: WVJBWebView) {
@@ -320,7 +325,7 @@ open class WebViewActivity : FragmentActivity() {
             Log.i(tag, data.toString())
             val data = Gson().fromJson(data.toString(), LocType::class.java)
             if (data.type == 2) { //高德
-                val mLocationClient = AMapLocationClient(applicationContext)
+                val mLocationClient = AMapLocationClient(this)
                 val mLocationOption = AMapLocationClientOption()
                 mLocationOption.locationMode =
                     AMapLocationClientOption.AMapLocationMode.Hight_Accuracy
@@ -404,6 +409,57 @@ open class WebViewActivity : FragmentActivity() {
                 }
             }
         })
+        // get weather info
+        mWebView.registerHandler(
+            "weatherInfo",
+            WVJBWebView.WVJBHandler<Any?, Any?> { data, function ->
+                Log.i(tag, "js call get weather info")
+                Log.i(tag, data.toString())
+                val data = Gson().fromJson(data.toString(), WeatherReqData::class.java)
+                val city = data.city
+                val mQuery = if (data.type == 1) {
+                    WeatherSearchQuery(city, WeatherSearchQuery.WEATHER_TYPE_LIVE)
+                } else {
+                    WeatherSearchQuery(city, WeatherSearchQuery.WEATHER_TYPE_FORECAST)
+                }
+
+                val mWeatherSearch = WeatherSearch(this)
+                mWeatherSearch.query = mQuery
+                mWeatherSearch.searchWeatherAsyn()
+                mWeatherSearch.setOnWeatherSearchListener(object :
+                    WeatherSearch.OnWeatherSearchListener {
+                    override fun onWeatherLiveSearched(p0: LocalWeatherLiveResult?, p1: Int) {
+                        if (data.type == 1) {
+                            Log.i(tag, "get weather live info")
+                            val result = p0?.liveResult
+                            result?.let {
+                                val data = WeatherData(
+                                    it.city,
+                                    it.adCode,
+                                    it.province,
+                                    it.temperature,
+                                    it.humidity,
+                                    it.weather,
+                                    it.windDirection,
+                                    it.windPower,
+                                    it.reportTime
+                                )
+                                function.onResult(json(1, data, "realtime weather data"))
+                            }
+                        }
+                    }
+
+                    override fun onWeatherForecastSearched(
+                        p0: LocalWeatherForecastResult?,
+                        p1: Int
+                    ) {
+                        if (data.type == 2) {
+                            Log.i(tag, "get weather forecast info")
+                            function.onResult(json(1, p0?.forecastResult, "forecast weather data"))
+                        }
+                    }
+                })
+            })
     }
 
     private fun checkBle(): Boolean {

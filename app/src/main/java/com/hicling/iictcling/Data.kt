@@ -32,8 +32,24 @@ data class LocData(
     val zipCode: String?,
     val city: String?,
     val area: String?,
-    val cityCode: String? = null,
+    val cityPhoneNum: String? = null,
     val address: String? = null,
     val street: String? = null,
     val streetNum: String? = null
+)
+
+data class WeatherReqData(
+    val city: String?,
+    val type: Int = 0 //1实时天气，2预测天气
+)
+data class WeatherData(
+    val city:String?,
+    val cityCode:String?,
+    val province: String?,
+    val temp:String?,
+    val humidity:String?,
+    val weather:String?,
+    val windDirection: String?,
+    val windPower:String?,
+    val time:String?
 )
