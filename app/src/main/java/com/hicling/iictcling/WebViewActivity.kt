@@ -280,6 +280,7 @@ open class WebViewActivity : FragmentActivity() {
                 function.onResult(json(0, null, "Fail to turn on, no ble"))
             }
         })
+        // scan bluetooth devices
         mWebView.registerHandler("scanBle", WVJBWebView.WVJBHandler<Any?, Any?> { data, function ->
             Log.i(tag, "js call scanBle")
             Log.i(tag, data.toString())
@@ -291,7 +292,18 @@ open class WebViewActivity : FragmentActivity() {
                         val msg = "BleScan results"
                         Log.i(tag, msg)
                         Log.i(tag, result.toString())
-                        function.onResult(json(1, result, msg))
+                        result?.let {
+                            val device = it.device
+                            val data = BleDeviceData(
+                                device.address,
+                                device.name,
+                                device.type,
+                                device.bondState,
+                                it.rssi,
+                                it.timestampNanos
+                            )
+                            mWebView.callHandler("BleOnScanResult", json(1, data))
+                        }
                     }
 
                     override fun onBatchScanResults(results: MutableList<ScanResult>?) {
@@ -299,7 +311,7 @@ open class WebViewActivity : FragmentActivity() {
                         val msg = "Batch Scan Results"
                         Log.i(tag, msg)
                         Log.i(tag, results.toString())
-                        function.onResult(json(1, results, msg))
+                        mWebView.callHandler("BleOnBatchScanResult", json(1, results))
                     }
 
                     override fun onScanFailed(errorCode: Int) {
@@ -307,15 +319,17 @@ open class WebViewActivity : FragmentActivity() {
                         val msg = "BleScan fail to scan errorCode: $errorCode"
                         Log.i(tag, msg)
                         Log.i(tag, errorCode.toString())
-                        function.onResult(json(0, null, msg))
+                        mWebView.callHandler("BleOnScanFailed", json(0, errorCode))
                     }
                 }
+                // 已经开始扫描
+                function.onResult(json(1, null, " start scan Ble"))
                 val scanner = BluetoothAdapter.getDefaultAdapter().bluetoothLeScanner
                 Log.i(tag, "start scan for ${data.time / 1000}s")
                 scanner.startScan(scanCallback)
                 handler.postDelayed({
                     scanner.stopScan(scanCallback)
-                    Log.i(tag, "stop scan ble")
+                    Log.i(tag, "stop scan Ble")
                 }, data.time)
             }
         })

@@ -53,3 +53,12 @@ data class WeatherData(
     val windPower:String?,
     val time:String?
 )
+data class BleDeviceData(
+    val mac:String?,
+    val name:String?,
+    val rssi:Int?,
+    val type:Int?,
+    val bondState:Int?,
+    val time:Long?
+
+)
