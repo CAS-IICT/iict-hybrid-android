@@ -38,7 +38,7 @@
 
         <meta-data
             android:name="com.amap.api.v2.apikey"
-            android:value="20d318f31afd8525cf194f33c8f11a80" />
+            android:value="" />
 
         <service android:name="com.amap.api.location.APSService"></service>
         <service android:name="com.hicling.clingsdk.bleservice.ClingCommunicatorService" />

@@ -327,6 +327,7 @@ open class WebViewActivity : FragmentActivity() {
                 val scanner = BluetoothAdapter.getDefaultAdapter().bluetoothLeScanner
                 Log.i(tag, "start scan for ${data.time / 1000}s")
                 scanner.startScan(scanCallback)
+                // 定时关闭蓝牙扫描
                 handler.postDelayed({
                     scanner.stopScan(scanCallback)
                     Log.i(tag, "stop scan Ble")
