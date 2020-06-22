@@ -6,24 +6,25 @@
  */
 package com.hicling.iictcling
 
-import com.hicling.clingsdk.ClingSdk
+import android.content.Intent
 import android.os.Bundle
 import android.util.Log
 import android.view.View
 import android.widget.LinearLayout
 import com.google.gson.Gson
+import com.hicling.clingsdk.ClingSdk
 import com.hicling.clingsdk.devicemodel.PERIPHERAL_DEVICE_INFO_CONTEXT
-import com.hicling.clingsdk.listener.OnBleListener
-import com.hicling.clingsdk.listener.OnBleListener.OnBleDataListener
-import com.hicling.clingsdk.listener.OnBleListener.OnDeviceConnectedListener
+import com.hicling.clingsdk.listener.OnBleListener.*
 import com.hicling.clingsdk.listener.OnNetworkListener
 import com.hicling.clingsdk.model.DayTotalDataModel
+import com.hicling.iictcling.notification.SysNotificationListenerService
 import wendu.webviewjavascriptbridge.WVJBWebView
 import wendu.webviewjavascriptbridge.WVJBWebView.WVJBHandler
 
 
 class MainActivity : WebViewActivity() {
     override var url = "http://192.168.1.79:8080"
+
     //override var url = "http://192.168.1.103:8080" //前端
     private var deviceInfo: PERIPHERAL_DEVICE_INFO_CONTEXT? = null
     private var splashView: LinearLayout? = null
@@ -49,12 +50,28 @@ class MainActivity : WebViewActivity() {
     }
 
     private fun initCling() {
-        ClingSdk.init(this, appID, appSecret, clingReady)
+        val intent = Intent(this, SysNotificationListenerService::class.java)
+        startService(intent)
+        ClingSdk.init(App.getContext(), appID, appSecret, clingReady)
         ClingSdk.setBleDataListener(bleDataListener)
         ClingSdk.setDeviceConnectListener(mDeviceConnectedListener)
+        ClingSdk.deregisterDevice(deregisterDeviceListener)
         ClingSdk.enableDebugMode(true)
-        ClingSdk.start(this)
+        ClingSdk.start(App.getContext())
     }
+
+    private val deregisterDeviceListener: OnDeregisterDeviceListener =
+        object : OnDeregisterDeviceListener {
+            override fun onDeregisterDeviceSucceed() {
+                Log.i(tag, "onDeregisterDeviceSucceed()")
+                ClingSdk.clearDatabase()
+                //            Main3Activity.this.finish();
+            }
+
+            override fun onDeregisterDeviceFailed(i: Int, s: String) {
+                Log.i(tag, "onDeregisterDeviceFailed(): $i, $s")
+            }
+        }
 
     // sdk is ready
     private val clingReady = object : OnNetworkListener {
@@ -211,15 +228,15 @@ class MainActivity : WebViewActivity() {
         mWebView.registerHandler("startScan", WVJBHandler<Any?, Any?> { data, function ->
             Log.i(tag, "js call start scanning devices")
             ClingSdk.stopScan()
-            ClingSdk.setClingDeviceType(ClingSdk.CLING_DEVICE_TYPE_ALL)
+            if (!ClingSdk.isAccountBondWithCling()) {
+                ClingSdk.setClingDeviceType(ClingSdk.CLING_DEVICE_TYPE_ALL)
+            }
             Log.i(tag, data.toString())
             val data = Gson().fromJson(data.toString(), TimeData::class.java)
-            ClingSdk.startScan(data.time.toInt(), object : OnBleListener.OnScanDeviceListener {
-                override fun onBleScanUpdated(obj: Any?) {
-                    Log.i(tag, obj.toString())
-                    function.onResult(json(1, obj, "list devices"))
-                }
-            })
+            ClingSdk.startScan(data.time.toInt()) { obj ->
+                Log.i(tag, obj.toString())
+                function.onResult(json(1, obj, "list devices"))
+            }
         })
 
         // stop scan cling devices
