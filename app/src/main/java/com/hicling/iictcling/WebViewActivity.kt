@@ -19,17 +19,18 @@ import android.app.AlertDialog
 import android.bluetooth.BluetoothAdapter
 import android.bluetooth.le.ScanCallback
 import android.bluetooth.le.ScanResult
-import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.graphics.Color
-import android.location.Geocoder
-import android.location.LocationManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.provider.Settings
+import android.text.TextUtils
+import android.util.Base64
 import android.util.Log
 import android.view.Gravity
 import android.view.KeyEvent
@@ -44,9 +45,18 @@ import com.amap.api.services.weather.LocalWeatherLiveResult
 import com.amap.api.services.weather.WeatherSearch
 import com.amap.api.services.weather.WeatherSearchQuery
 import com.google.gson.Gson
+import com.linchaolong.android.imagepicker.ImagePicker
+import com.linchaolong.android.imagepicker.cropper.CropImage
+import com.linchaolong.android.imagepicker.cropper.CropImageView
 import wendu.webviewjavascriptbridge.WVJBWebView
+import java.io.ByteArrayOutputStream
+import java.io.FileInputStream
+import java.io.IOException
+import java.io.InputStream
+import java.lang.Error
 
 
+@Suppress("DEPRECATION")
 @SuppressLint("Registered")
 open class WebViewActivity : Activity() {
 
@@ -56,6 +66,7 @@ open class WebViewActivity : Activity() {
     private val content: Int = R.layout.activity_webview // overridable
     open var mWebView: WVJBWebView? = null
     private val handler = Handler()
+    private val imagePicker: ImagePicker = ImagePicker()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -334,94 +345,42 @@ open class WebViewActivity : Activity() {
                 }, data.time)
             }
         })
-        // get location position, 1表示安卓原生定位，2表示高德定位
+        // get location position, 统一只使用高德
         mWebView.registerHandler("location", WVJBWebView.WVJBHandler<Any?, Any?> { data, function ->
             Log.i(tag, "js call get location")
             Log.i(tag, data.toString())
-            val data = Gson().fromJson(data.toString(), LocType::class.java)
-            if (data.type == 2) { //高德
-                val mLocationClient = AMapLocationClient(this)
-                val mLocationOption = AMapLocationClientOption()
-                mLocationOption.locationMode =
-                    AMapLocationClientOption.AMapLocationMode.Hight_Accuracy
-                mLocationOption.locationMode =
-                    AMapLocationClientOption.AMapLocationMode.Battery_Saving
-                mLocationOption.isOnceLocation = true
-                mLocationOption.isOnceLocationLatest = true
-                mLocationClient.setLocationOption(mLocationOption)
-                mLocationClient.stopLocation()
-                mLocationClient.startLocation()
-                mLocationClient.setLocationListener {
-                    Log.i(tag, it.toString())
-                    val data = LocData(
-                        it.longitude,
-                        it.latitude,
-                        it.altitude,
-                        it.provider,
-                        it.speed,
-                        it.time,
-                        it.province,
-                        null,
-                        it.country,
-                        it.adCode,
-                        it.city,
-                        it.district,
-                        it.cityCode,
-                        it.address,
-                        it.street,
-                        it.streetNum
-                    )
-                    function.onResult(json(1, data, "GaoDe get location"))
-                }
-            } else { //原生定位
-                val locationManager =
-                    this.getSystemService(Context.LOCATION_SERVICE) as LocationManager
-                val providers: List<String> = locationManager.getProviders(true)
-                var locationProvider: String? = null
-                // through GPS
-                val msg: String
-                when {
-                    providers.contains(LocationManager.GPS_PROVIDER) -> {
-                        msg = "GPS get location"
-                        Log.i(tag, msg)
-                        locationProvider = LocationManager.GPS_PROVIDER
-                    }
-                    // through network
-                    providers.contains(LocationManager.NETWORK_PROVIDER) -> {
-                        msg = "network get location"
-                        Log.i(tag, msg)
-                        //如果是Network
-                        locationProvider = LocationManager.NETWORK_PROVIDER
-                    }
-                    else -> {
-                        msg = "location is not available"
-                        val i = Intent()
-                        i.action = Settings.ACTION_LOCATION_SOURCE_SETTINGS
-                        this.startActivity(i)
-                    }
-                }
-                if (locationProvider != null) {
-                    val location = locationManager.getLastKnownLocation(locationProvider)
-                    val addList =
-                        Geocoder(this).getFromLocation(location.latitude, location.longitude, 1)
-                    val data = LocData(
-                        location.longitude,
-                        location.latitude,
-                        location.altitude,
-                        location.provider,
-                        location.speed,
-                        location.time,
-                        addList[0].adminArea,
-                        addList[0].countryCode,
-                        addList[0].countryName,
-                        addList[0].postalCode,
-                        addList[0].locality,
-                        addList[0].subLocality
-                    )
-                    function.onResult(json(1, data, msg))
-                } else {
-                    function.onResult(json(0, null, msg))
-                }
+            val mLocationClient = AMapLocationClient(this)
+            val mLocationOption = AMapLocationClientOption()
+            mLocationOption.locationMode =
+                AMapLocationClientOption.AMapLocationMode.Hight_Accuracy
+            mLocationOption.locationMode =
+                AMapLocationClientOption.AMapLocationMode.Battery_Saving
+            mLocationOption.isOnceLocation = true
+            mLocationOption.isOnceLocationLatest = true
+            mLocationClient.setLocationOption(mLocationOption)
+            mLocationClient.stopLocation()
+            mLocationClient.startLocation()
+            mLocationClient.setLocationListener {
+                Log.i(tag, it.toString())
+                val data = LocData(
+                    it.longitude,
+                    it.latitude,
+                    it.altitude,
+                    it.provider,
+                    it.speed,
+                    it.time,
+                    it.province,
+                    null,
+                    it.country,
+                    it.adCode,
+                    it.city,
+                    it.district,
+                    it.cityCode,
+                    it.address,
+                    it.street,
+                    it.streetNum
+                )
+                function.onResult(json(1, data, "GaoDe get location"))
             }
         })
         // get weather info
@@ -475,6 +434,49 @@ open class WebViewActivity : Activity() {
                     }
                 })
             })
+
+        // title, base64=true or false, if true, it will transform file to base64
+        mWebView.registerHandler("cropper", WVJBWebView.WVJBHandler<Any?, Any?> { data, function ->
+            Log.i(tag, "js call get cropper img")
+            Log.i(tag, data.toString())
+            val data = Gson().fromJson(data.toString(), CropperData::class.java)
+            imagePicker.setTitle(data.title)
+            imagePicker.setCropImage(true)
+            imagePicker.startChooser(this, object : ImagePicker.Callback() {
+                // 选择图片回调
+                override fun onPickImage(imageUri: Uri) {
+                    Log.i(tag, "origin img $imageUri")
+                }
+
+                // 裁剪图片回调
+                override fun onCropImage(imageUri: Uri) {
+                    Log.i(tag, "cropped img ${imageUri.path}")
+                    if (data.base64) {
+                        val baseImg = base64Img(imageUri.path)
+                        function.onResult(json(1, "data:image/jpeg;base64,$baseImg", "cropped image path"))
+                    } else {
+                        function.onResult(json(1, "$imageUri", "cropped image path"))
+                    }
+                }
+
+                // 自定义裁剪配置
+                override fun cropConfig(builder: CropImage.ActivityBuilder) {
+                    builder.setMultiTouchEnabled(false)
+                        .setGuidelines(CropImageView.Guidelines.ON)
+                        .setCropShape(CropImageView.CropShape.RECTANGLE)
+                        .setRequestedSize(100, 100)
+                        .setAspectRatio(1, 1)
+                }
+
+                // 用户拒绝授权回调
+                override fun onPermissionDenied(
+                    requestCode: Int,
+                    permissions: Array<String>,
+                    grantResults: IntArray
+                ) {
+                }
+            })
+        })
     }
 
     private fun checkBle(): Boolean {
@@ -544,7 +546,8 @@ open class WebViewActivity : Activity() {
         Manifest.permission.CHANGE_WIFI_STATE,
         Manifest.permission.ACCESS_FINE_LOCATION,
         Manifest.permission.ACCESS_COARSE_LOCATION,
-        Manifest.permission.CHANGE_NETWORK_STATE
+        Manifest.permission.CHANGE_NETWORK_STATE,
+        Manifest.permission.CAMERA
     )
     private var countRequest = 0
 
@@ -566,6 +569,8 @@ open class WebViewActivity : Activity() {
         grantResults: IntArray
     ) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        // check permission of images picker
+        imagePicker.onRequestPermissionsResult(this, requestCode, permissions, grantResults);
         when (requestCode) {
             accessCode -> if (checkPermission(grantResults)) {
                 Log.i(tag, "onRequestPermissionsResult: 用户允许权限 accessCode:$accessCode")
@@ -602,6 +607,32 @@ open class WebViewActivity : Activity() {
             this.startActivity(intent)
         } catch (e: Exception) {
             e.printStackTrace()
+        }
+    }
+
+    override fun onActivityResult(
+        requestCode: Int,
+        resultCode: Int,
+        data: Intent?
+    ) {
+        super.onActivityResult(requestCode, resultCode, data)
+        imagePicker.onActivityResult(this, requestCode, resultCode, data)
+    }
+
+    private fun base64Img(path: String?): String? {
+        if (path == null || TextUtils.isEmpty(path)) {
+            throw Error("error: path is empty")
+        }
+        var input: InputStream?
+        val data: ByteArray
+        return try {
+            input = FileInputStream(path)
+            data = ByteArray(input.available())
+            input.read(data)
+            Base64.encodeToString(data, Base64.DEFAULT)
+        } catch (e: IOException) {
+            Log.e(tag, e.message)
+            null
         }
     }
 }

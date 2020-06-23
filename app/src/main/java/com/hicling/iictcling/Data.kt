@@ -18,7 +18,7 @@ data class SignInData(val username: String?, val password: String?)
 data class SignUpData(val username: String?, val password: String?, val rePassword: String?)
 data class ResData(val status: Int?, val data: Any?, val msg: String?)
 data class TimeData(val time: Long = 10000)
-data class LocType(val type: Int = 1) //1 native, 2 高德
+data class CropperData(val title: String = "", val base64: Boolean = true)
 data class LocData(
     val longitude: Double?,
     val latitude: Double?,
@@ -42,23 +42,25 @@ data class WeatherReqData(
     val city: String?,
     val type: Int = 0 //1实时天气，2预测天气
 )
+
 data class WeatherData(
-    val city:String?,
-    val cityCode:String?,
+    val city: String?,
+    val cityCode: String?,
     val province: String?,
-    val temp:String?,
-    val humidity:String?,
-    val weather:String?,
+    val temp: String?,
+    val humidity: String?,
+    val weather: String?,
     val windDirection: String?,
-    val windPower:String?,
-    val time:String?
+    val windPower: String?,
+    val time: String?
 )
+
 data class BleDeviceData(
-    val mac:String?,
-    val name:String?,
-    val rssi:Int?,
-    val type:Int?,
-    val bondState:Int?,
-    val time:Long?
+    val mac: String?,
+    val name: String?,
+    val rssi: Int?,
+    val type: Int?,
+    val bondState: Int?,
+    val time: Long?
 
 )

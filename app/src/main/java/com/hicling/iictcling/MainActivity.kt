@@ -44,7 +44,6 @@ class MainActivity : WebViewActivity() {
         findViewById<WVJBWebView>(R.id.webview)?.let {
             mWebView = it
             initWebView(it)
-            initCling()
             initBridge(it)
         }
     }
