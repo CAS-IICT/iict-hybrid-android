@@ -50,10 +50,7 @@ import com.linchaolong.android.imagepicker.cropper.CropImage
 import com.linchaolong.android.imagepicker.cropper.CropImageView
 import wendu.webviewjavascriptbridge.WVJBWebView
 import java.io.ByteArrayOutputStream
-import java.io.FileInputStream
 import java.io.IOException
-import java.io.InputStream
-import java.lang.Error
 
 
 @Suppress("DEPRECATION")
@@ -452,8 +449,10 @@ open class WebViewActivity : Activity() {
                 override fun onCropImage(imageUri: Uri) {
                     Log.i(tag, "cropped img ${imageUri.path}")
                     if (data.base64) {
-                        val baseImg = base64Img(imageUri.path)
-                        function.onResult(json(1, "data:image/jpeg;base64,$baseImg", "cropped image path"))
+                        val baseImg = base64Img(imageUri.path, data.quality)
+                        function.onResult(
+                            json(1, "data:image/jpeg;base64,$baseImg", "cropped image base64")
+                        )
                     } else {
                         function.onResult(json(1, "$imageUri", "cropped image path"))
                     }
@@ -464,7 +463,7 @@ open class WebViewActivity : Activity() {
                     builder.setMultiTouchEnabled(false)
                         .setGuidelines(CropImageView.Guidelines.ON)
                         .setCropShape(CropImageView.CropShape.RECTANGLE)
-                        .setRequestedSize(100, 100)
+                        .setRequestedSize(data.width, data.height)
                         .setAspectRatio(1, 1)
                 }
 
@@ -619,17 +618,18 @@ open class WebViewActivity : Activity() {
         imagePicker.onActivityResult(this, requestCode, resultCode, data)
     }
 
-    private fun base64Img(path: String?): String? {
+    // file to base64
+    private fun base64Img(path: String?, quality: Int = 100): String? {
         if (path == null || TextUtils.isEmpty(path)) {
             throw Error("error: path is empty")
         }
-        var input: InputStream?
-        val data: ByteArray
         return try {
-            input = FileInputStream(path)
-            data = ByteArray(input.available())
-            input.read(data)
-            Base64.encodeToString(data, Base64.DEFAULT)
+            val bitmap = BitmapFactory.decodeFile(path)
+            val os = ByteArrayOutputStream()
+            bitmap.compress(Bitmap.CompressFormat.PNG, quality, os)
+            val bytes = os.toByteArray()
+            Log.i(tag, "path:$path, quality:$quality")
+            String(Base64.encode(bytes, Base64.DEFAULT))
         } catch (e: IOException) {
             Log.e(tag, e.message)
             null

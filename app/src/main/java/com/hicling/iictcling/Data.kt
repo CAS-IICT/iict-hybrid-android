@@ -18,7 +18,14 @@ data class SignInData(val username: String?, val password: String?)
 data class SignUpData(val username: String?, val password: String?, val rePassword: String?)
 data class ResData(val status: Int?, val data: Any?, val msg: String?)
 data class TimeData(val time: Long = 10000)
-data class CropperData(val title: String = "", val base64: Boolean = true)
+data class CropperData(
+    val title: String = "",
+    val base64: Boolean = true,
+    val quality: Int = 100,
+    val width: Int = 500,
+    val height: Int = 500
+)
+
 data class LocData(
     val longitude: Double?,
     val latitude: Double?,

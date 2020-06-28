@@ -23,9 +23,9 @@ import wendu.webviewjavascriptbridge.WVJBWebView.WVJBHandler
 
 
 class MainActivity : WebViewActivity() {
-    override var url = "http://192.168.1.79:8080"
+    //override var url = "http://192.168.1.79:8080"
 
-    //override var url = "http://192.168.1.103:8080" //前端
+    override var url = "http://192.168.1.103:8080" //前端
     private var deviceInfo: PERIPHERAL_DEVICE_INFO_CONTEXT? = null
     private var splashView: LinearLayout? = null
 
@@ -45,18 +45,19 @@ class MainActivity : WebViewActivity() {
             mWebView = it
             initWebView(it)
             initBridge(it)
+            initCling()
         }
     }
 
     private fun initCling() {
-        val intent = Intent(this, SysNotificationListenerService::class.java)
+        val intent = Intent(this.applicationContext, SysNotificationListenerService::class.java)
         startService(intent)
-        ClingSdk.init(App.getContext(), appID, appSecret, clingReady)
+        ClingSdk.init(this.applicationContext, appID, appSecret, clingReady)
         ClingSdk.setBleDataListener(bleDataListener)
         ClingSdk.setDeviceConnectListener(mDeviceConnectedListener)
         ClingSdk.deregisterDevice(deregisterDeviceListener)
         ClingSdk.enableDebugMode(true)
-        ClingSdk.start(App.getContext())
+        ClingSdk.start(this.applicationContext)
     }
 
     private val deregisterDeviceListener: OnDeregisterDeviceListener =
