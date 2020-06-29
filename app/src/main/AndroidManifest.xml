@@ -40,13 +40,13 @@
         android:theme="@style/AppTheme"
         android:usesCleartextTraffic="true"
         tools:targetApi="l">
+        <activity android:name=".MapActivity"></activity>
 
         <meta-data
             android:name="com.amap.api.v2.apikey"
             android:value="20d318f31afd8525cf194f33c8f11a80" />
 
         <service android:name="com.amap.api.location.APSService" />
-
         <service
             android:name="com.hicling.clingsdk.bleservice.ClingCommunicatorService"
             android:enabled="true" />
@@ -56,9 +56,8 @@
         <service
             android:name="com.hicling.clingsdk.systembroadcast.ClingSystemBroadcastService"
             android:enabled="true" />
-
         <service
-            android:name="com.hicling.iictcling.notification.SysNotificationListenerService"
+            android:name=".notification.SysNotificationListenerService"
             android:label="Demo Notification Service "
             android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE">
             <intent-filter>
@@ -75,6 +74,7 @@
             android:screenOrientation="portrait">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
+
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>

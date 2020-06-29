@@ -5,4 +5,5 @@
     <string name="request">要求</string>
     <string name="exit">再次点击将退出应用</string>
     <string name="open_permission_req">请打开相应的权限使用应用!</string>
+    <string name="location_error">无法打开定位，请检查定位服务</string>
 </resources>

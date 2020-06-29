@@ -71,3 +71,12 @@ data class BleDeviceData(
     val time: Long?
 
 )
+
+data class MapData(
+    val show: Boolean = true,
+    val height: Int = 0,
+    val width: Int = 0
+)
+
+data class OpenMapData(val path: String = "")
+data class MapZoomData(val size: Float = 12f)

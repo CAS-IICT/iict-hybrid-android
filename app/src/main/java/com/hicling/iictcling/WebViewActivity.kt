@@ -57,7 +57,9 @@ import java.io.IOException
 @SuppressLint("Registered")
 open class WebViewActivity : Activity() {
 
-    open var url: String = ""
+    open var url = "http://192.168.1.79:8080"
+
+    //override var url = "http://192.168.1.103:8080" //前端
     open val tag: String = this.javaClass.simpleName
     private var loading: Boolean = false
     private val content: Int = R.layout.activity_webview // overridable
@@ -82,8 +84,12 @@ open class WebViewActivity : Activity() {
 
     // initial function, make all the config for jsbridge
     @SuppressLint("SetJavaScriptEnabled")
-    open fun initWebView(mWebView: WVJBWebView, loading: Boolean = false) {
-        Log.i(tag, "init url $url")
+    open fun initWebView(
+        mWebView: WVJBWebView,
+        loading: Boolean = false,
+        otherUrl: String? = null
+    ) {
+        if (otherUrl != null) url += otherUrl
         showLoading(loading)
         val webSettings: WebSettings = mWebView.settings
 
@@ -132,8 +138,8 @@ open class WebViewActivity : Activity() {
                 error: WebResourceError?
             ) {
                 Log.i(tag, "onReceivedError")
-                view?.loadUrl("file:///android_asset/error.html")
-                onLoadError()
+                //view?.loadUrl("file:///android_asset/error.html")
+                //onLoadError()
                 super.onReceivedError(view, request, error)
             }
 
@@ -213,9 +219,7 @@ open class WebViewActivity : Activity() {
             Log.i(tag, "js call toast")
             Log.i(tag, data.toString())
             val data = Gson().fromJson(data.toString(), ToastData::class.java)
-            val toast = Toast.makeText(this, data.text, Toast.LENGTH_SHORT)
-            toast.setGravity(Gravity.BOTTOM, 0, 100)
-            toast.show()
+            toast(data.text)
             function.onResult(json(1))
         })
         // alert
@@ -476,6 +480,13 @@ open class WebViewActivity : Activity() {
                 }
             })
         })
+        mWebView.registerHandler("openMapActivity", WVJBWebView.WVJBHandler<Any?, Any?> { data, function ->
+            Log.i(tag, "js call get cropper img")
+            Log.i(tag, data.toString())
+            val data = Gson().fromJson(data.toString(), OpenMapData::class.java)
+            goMap(data.path)
+            function.onResult(json(1, null, "map opened"))
+        })
     }
 
     private fun checkBle(): Boolean {
@@ -490,6 +501,14 @@ open class WebViewActivity : Activity() {
         val bundle = Bundle()
         bundle.putString("url", url)
         bundle.putBoolean("loading", loading)
+        intent.putExtras(bundle)
+        startActivity(intent)
+    }
+
+    private fun goMap(path: String = "") {
+        val intent = Intent(this, MapActivity::class.java)
+        val bundle = Bundle()
+        bundle.putString("path", path)
         intent.putExtras(bundle)
         startActivity(intent)
     }
@@ -509,7 +528,7 @@ open class WebViewActivity : Activity() {
                 mWebView?.goBack()
                 true
             } else {
-                Log.i(tag, "Activity cant go back")
+                Log.i(tag, "Activity go back")
                 isExit++
                 exit()
                 false
@@ -519,7 +538,7 @@ open class WebViewActivity : Activity() {
     }
 
     private fun exit() {
-        if (isExit < 2) {
+        if (isExit < 2 && tag == "MainActivity") {
             Toast.makeText(applicationContext, R.string.exit, Toast.LENGTH_SHORT).show()
             handler.postDelayed({ isExit-- }, 2000L)
         } else {
@@ -606,6 +625,22 @@ open class WebViewActivity : Activity() {
             this.startActivity(intent)
         } catch (e: Exception) {
             e.printStackTrace()
+        }
+    }
+
+    open fun toast(text: String?) {
+        text?.let {
+            val toast = Toast.makeText(this, it, Toast.LENGTH_SHORT)
+            toast.setGravity(Gravity.BOTTOM, 0, 100)
+            toast.show()
+        }
+    }
+
+    open fun toast(text: Int?) {
+        text?.let {
+            val toast = Toast.makeText(this, it, Toast.LENGTH_SHORT)
+            toast.setGravity(Gravity.BOTTOM, 0, 100)
+            toast.show()
         }
     }
 
