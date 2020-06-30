@@ -588,7 +588,7 @@ open class WebViewActivity : Activity() {
     ) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         // check permission of images picker
-        imagePicker.onRequestPermissionsResult(this, requestCode, permissions, grantResults);
+        imagePicker.onRequestPermissionsResult(this, requestCode, permissions, grantResults)
         when (requestCode) {
             accessCode -> if (checkPermission(grantResults)) {
                 Log.i(tag, "onRequestPermissionsResult: 用户允许权限 accessCode:$accessCode")
@@ -669,6 +669,11 @@ open class WebViewActivity : Activity() {
             Log.e(tag, e.message)
             null
         }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        mWebView?.destroy()
     }
 }
 

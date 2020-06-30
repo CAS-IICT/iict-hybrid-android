@@ -42,7 +42,7 @@ class MainActivity : WebViewActivity() {
             mWebView = it
             initWebView(it)
             initBridge(it)
-            initCling()
+            //initCling()
         }
     }
 

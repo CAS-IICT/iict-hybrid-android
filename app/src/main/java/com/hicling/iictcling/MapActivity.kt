@@ -1,19 +1,22 @@
 package com.hicling.iictcling
 
 import android.os.Bundle
+import android.util.DisplayMetrics
 import android.util.Log
 import android.view.View
+import android.view.ViewGroup.MarginLayoutParams
+import android.widget.RelativeLayout
 import com.amap.api.location.AMapLocation
 import com.amap.api.location.AMapLocationClient
 import com.amap.api.location.AMapLocationClientOption
 import com.amap.api.location.AMapLocationListener
-import com.amap.api.maps2d.AMap
-import com.amap.api.maps2d.CameraUpdateFactory
-import com.amap.api.maps2d.LocationSource
-import com.amap.api.maps2d.LocationSource.OnLocationChangedListener
-import com.amap.api.maps2d.MapView
-import com.amap.api.maps2d.model.MyLocationStyle
-import com.amap.api.maps2d.model.MyLocationStyle.LOCATION_TYPE_LOCATE
+import com.amap.api.maps.AMap
+import com.amap.api.maps.CameraUpdateFactory
+import com.amap.api.maps.LocationSource
+import com.amap.api.maps.MapView
+import com.amap.api.maps.model.LatLng
+import com.amap.api.maps.model.MyLocationStyle
+import com.amap.api.maps.model.MyLocationStyle.LOCATION_TYPE_LOCATE
 import com.google.gson.Gson
 import wendu.webviewjavascriptbridge.WVJBWebView
 
@@ -21,9 +24,10 @@ import wendu.webviewjavascriptbridge.WVJBWebView
 class MapActivity : WebViewActivity(), LocationSource, AMapLocationListener {
     private var mMapView: MapView? = null
     private var aMap: AMap? = null
+    private var myLocation: AMapLocation? = null
 
     //定位需要的数据
-    private var mListener: OnLocationChangedListener? = null
+    private var mListener: LocationSource.OnLocationChangedListener? = null
     private var mLocationClient: AMapLocationClient? = null
     private val content = R.layout.activity_map
     override val tag = this.javaClass.simpleName
@@ -53,23 +57,50 @@ class MapActivity : WebViewActivity(), LocationSource, AMapLocationListener {
             Log.i(tag, data.toString())
             val data = Gson().fromJson(data.toString(), MapZoomData::class.java)
             aMap?.moveCamera(CameraUpdateFactory.zoomTo(data.size))
+            function.onResult(json(1, null, "success to zoom map to ${data.size}"))
+        })
+        // move the camera to the center of myself, blue point
+        mWebView.registerHandler("moveCenter", WVJBWebView.WVJBHandler<Any?, Any?> { _, function ->
+            Log.i(tag, "js call move center")
+            myLocation?.let {
+                aMap?.moveCamera(
+                    CameraUpdateFactory.changeLatLng(LatLng(it.latitude, it.longitude))
+                )
+            }
+            function.onResult(json(1, null, "success move to center of myself"))
         })
         mWebView.registerHandler("setMap", WVJBWebView.WVJBHandler<Any?, Any?> { data, function ->
             Log.i(tag, "js call set Map")
-            Log.i(tag, data.toString())
             val data = Gson().fromJson(data.toString(), MapData::class.java)
-            mMapView?.let {
-                val linearParams = it.layoutParams
-                linearParams.height = data.height
-                linearParams.width = data.width
-                if (data.show) it.visibility = View.VISIBLE
-                else it.visibility = View.INVISIBLE
-                it.layoutParams = linearParams
+            val mViewMap = findViewById<RelativeLayout>(R.id.view_map)
+            mViewMap?.let {
+                // get display info
+                val outMetrics = DisplayMetrics()
+                windowManager.defaultDisplay.getMetrics(outMetrics)
+                // 地图大小禁止大于屏幕大小
+                if (data.width > outMetrics.widthPixels) data.width = outMetrics.widthPixels
+                if (data.height > outMetrics.widthPixels) data.height = outMetrics.heightPixels
+
+                val margin = MarginLayoutParams(it.layoutParams)
+                margin.setMargins(data.left, data.top, data.right, data.bottom)
+
+                val layoutParams = RelativeLayout.LayoutParams(margin)
+                layoutParams.width = data.width
+                layoutParams.height = data.height
+                it.layoutParams = layoutParams
+
+                Log.i(tag, data.toString())
+                when (data.show) {
+                    "visible" -> it.visibility = View.VISIBLE
+                    "invisible" -> it.visibility = View.INVISIBLE
+                    else -> it.visibility = View.GONE
+                }
                 function.onResult(json(1, null, "set map successfully"))
             }
         })
     }
 
+    // init the map and location
     private fun setMyLocation(map: MapView) {
         mMapView = map
         Log.i(tag, "set my location")
@@ -81,11 +112,11 @@ class MapActivity : WebViewActivity(), LocationSource, AMapLocationListener {
             it.setLocationSource(this)
             it.isMyLocationEnabled = true
             it.setMyLocationType(LOCATION_TYPE_LOCATE)
-            it.setMyLocationStyle(myLocationStyle)
+            it.myLocationStyle = myLocationStyle
             it.uiSettings.isMyLocationButtonEnabled = true
             it.setOnMyLocationChangeListener {}
         }
-        myLocationStyle.myLocationType(MyLocationStyle.LOCATION_TYPE_FOLLOW)
+        //myLocationStyle.myLocationType(MyLocationStyle.LOCATION_TYPE_FOLLOW)
         myLocationStyle.showMyLocation(true)
     }
 
@@ -116,7 +147,7 @@ class MapActivity : WebViewActivity(), LocationSource, AMapLocationListener {
         mMapView?.onSaveInstanceState(outState)
     }
 
-    override fun activate(p0: OnLocationChangedListener?) {
+    override fun activate(p0: LocationSource.OnLocationChangedListener?) {
         mListener = p0
         if (mLocationClient == null) {
             //初始化定位
@@ -144,7 +175,8 @@ class MapActivity : WebViewActivity(), LocationSource, AMapLocationListener {
     override fun onLocationChanged(aMapLocation: AMapLocation?) {
         if (mListener != null && aMapLocation != null) {
             if (aMapLocation.errorCode === 0) {
-                mListener!!.onLocationChanged(aMapLocation) // 显示系统小蓝点
+                myLocation = aMapLocation
+                mListener?.onLocationChanged(aMapLocation) // 显示系统小蓝点
             } else {
                 val errText =
                     "定位失败," + aMapLocation.errorCode.toString() + ": " + aMapLocation.errorInfo

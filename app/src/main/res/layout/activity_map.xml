@@ -1,18 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
     tools:context=".MapActivity">
-
-    <com.amap.api.maps2d.MapView
-        android:id="@+id/map"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:visibility="gone" />
-
 
     <wendu.webviewjavascriptbridge.WVJBWebView
         android:id="@+id/webview"
@@ -36,6 +29,18 @@
                 app:indicatorColor="#2196F3"
                 app:indicatorName="BallPulseIndicator" />
         </LinearLayout>
-
     </wendu.webviewjavascriptbridge.WVJBWebView>
-</LinearLayout>
+
+    <RelativeLayout
+        android:id="@+id/view_map"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:visibility="gone">
+
+        <com.amap.api.maps.MapView
+            android:id="@+id/map"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:visibility="visible" />
+    </RelativeLayout>
+</RelativeLayout>

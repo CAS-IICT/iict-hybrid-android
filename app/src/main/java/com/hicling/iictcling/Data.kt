@@ -73,9 +73,13 @@ data class BleDeviceData(
 )
 
 data class MapData(
-    val show: Boolean = true,
-    val height: Int = 0,
-    val width: Int = 0
+    var show: String = "gone",
+    var height: Int = 0,
+    var width: Int = 0,
+    var top: Int = 0,
+    var left: Int = 0,
+    var right: Int = 0,
+    var bottom: Int = 0
 )
 
 data class OpenMapData(val path: String = "")
