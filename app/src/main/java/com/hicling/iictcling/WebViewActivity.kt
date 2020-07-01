@@ -89,7 +89,8 @@ open class WebViewActivity : Activity() {
         loading: Boolean = false,
         otherUrl: String? = null
     ) {
-        if (otherUrl != null) url += otherUrl
+        if (otherUrl != null) url = otherUrl
+        Log.i(tag, "initWebView: $otherUrl")
         showLoading(loading)
         val webSettings: WebSettings = mWebView.settings
 
@@ -130,6 +131,7 @@ open class WebViewActivity : Activity() {
             override fun onPageFinished(view: WebView?, url: String?) {
                 onLoadFinish()
                 super.onPageFinished(view, url)
+                Log.i(tag, "Webview finish loading: $url")
             }
 
             override fun onReceivedError(
@@ -480,13 +482,15 @@ open class WebViewActivity : Activity() {
                 }
             })
         })
-        mWebView.registerHandler("openMapActivity", WVJBWebView.WVJBHandler<Any?, Any?> { data, function ->
-            Log.i(tag, "js call get cropper img")
-            Log.i(tag, data.toString())
-            val data = Gson().fromJson(data.toString(), OpenMapData::class.java)
-            goMap(data.path)
-            function.onResult(json(1, null, "map opened"))
-        })
+        mWebView.registerHandler(
+            "openMapActivity",
+            WVJBWebView.WVJBHandler<Any?, Any?> { data, function ->
+                Log.i(tag, "js call get cropper img")
+                Log.i(tag, data.toString())
+                val data = Gson().fromJson(data.toString(), OpenMapData::class.java)
+                goMap(data.path)
+                function.onResult(json(1, null, "map opened"))
+            })
     }
 
     private fun checkBle(): Boolean {

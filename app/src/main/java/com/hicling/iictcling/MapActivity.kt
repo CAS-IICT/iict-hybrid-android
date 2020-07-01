@@ -40,13 +40,13 @@ class MapActivity : WebViewActivity(), LocationSource, AMapLocationListener {
         // init web view
         findViewById<WVJBWebView>(R.id.webview)?.let {
             mWebView = it
-            initWebView(it, false, path)
+            initWebView(it, false, url + path)
             initBridge(it)
         }
         // init map view
         findViewById<MapView>(R.id.map)?.let {
             it.onCreate(savedInstanceState)
-            setMyLocation(it)
+            mMapView = it
         }
     }
 
@@ -95,6 +95,7 @@ class MapActivity : WebViewActivity(), LocationSource, AMapLocationListener {
                     "invisible" -> it.visibility = View.INVISIBLE
                     else -> it.visibility = View.GONE
                 }
+                setMyLocation(mMapView!!)
                 function.onResult(json(1, null, "set map successfully"))
             }
         })
@@ -102,10 +103,9 @@ class MapActivity : WebViewActivity(), LocationSource, AMapLocationListener {
 
     // init the map and location
     private fun setMyLocation(map: MapView) {
-        mMapView = map
         Log.i(tag, "set my location")
         val myLocationStyle = MyLocationStyle()
-        myLocationStyle.interval(2000)
+        myLocationStyle.interval(5000)
         aMap = map.map
         aMap?.let {
             it.moveCamera(CameraUpdateFactory.zoomTo(12f))
