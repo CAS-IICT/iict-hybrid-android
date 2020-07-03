@@ -57,9 +57,9 @@ import java.io.IOException
 @SuppressLint("Registered")
 open class WebViewActivity : Activity() {
 
-    open var url = "http://192.168.1.79:8080"
+    //open var url = "http://192.168.1.79:8080"
 
-    //override var url = "http://192.168.1.103:8080" //前端
+    open var url = "http://192.168.1.103:8080" //前端
     open val tag: String = this.javaClass.simpleName
     private var loading: Boolean = false
     private val content: Int = R.layout.activity_webview // overridable
@@ -658,7 +658,7 @@ open class WebViewActivity : Activity() {
     }
 
     // file to base64
-    private fun base64Img(path: String?, quality: Int = 100): String? {
+    open fun base64Img(path: String?, quality: Int = 100): String? {
         if (path == null || TextUtils.isEmpty(path)) {
             throw Error("error: path is empty")
         }
@@ -673,6 +673,12 @@ open class WebViewActivity : Activity() {
             Log.e(tag, e.message)
             null
         }
+    }
+    // base64 to bitmap
+    open fun base64ToBitmap(base64Data: String?): Bitmap? {
+        val bytes =
+            Base64.decode(base64Data, Base64.DEFAULT)
+        return BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
     }
 
     override fun onDestroy() {

@@ -29,6 +29,13 @@
                 app:indicatorColor="#2196F3"
                 app:indicatorName="BallPulseIndicator" />
         </LinearLayout>
+
+        <pl.droidsonroids.gif.GifImageView
+            android:id="@+id/loading_view"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="#213159"
+            android:src="@drawable/loading_earth" />
     </wendu.webviewjavascriptbridge.WVJBWebView>
 
     <RelativeLayout

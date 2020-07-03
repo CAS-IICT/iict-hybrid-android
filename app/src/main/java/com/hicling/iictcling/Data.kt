@@ -84,3 +84,10 @@ data class MapData(
 
 data class OpenMapData(val path: String = "")
 data class MapZoomData(val size: Float = 12f)
+data class MarkData(
+    val latitude: Double = 0.0,
+    val longitude: Double = 0.0,
+    val icon: String?,
+    val title: String?,
+    val desc: String?
+)

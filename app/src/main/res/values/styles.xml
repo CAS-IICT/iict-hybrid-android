@@ -1,8 +1,10 @@
-<resources>
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:android="http://schemas.android.com/apk/res/android">
 
     <!-- Base application theme. -->
     <style name="AppTheme" parent="android:Theme.DeviceDefault.Light.NoActionBar">
         <!-- Customize your theme here. -->
     </style>
 
+    <style name="TranslucentTheme" parent="android:Theme.DeviceDefault.Light.NoActionBar"></style>
 </resources>

@@ -4,5 +4,6 @@
     <string name="confirm">Confirm</string>
     <string name="request">Request</string>
     <string name="exit">Press twice will shut down the app!</string>
+    <string name="location_error">Unable to locate, please check location service!</string>
     <string name="open_permission_req">You need to open the permissions to use this App!</string>
 </resources>

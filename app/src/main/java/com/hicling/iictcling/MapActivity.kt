@@ -1,6 +1,8 @@
 package com.hicling.iictcling
 
+import android.graphics.BitmapFactory
 import android.os.Bundle
+import android.provider.SyncStateContract
 import android.util.DisplayMetrics
 import android.util.Log
 import android.view.View
@@ -14,10 +16,13 @@ import com.amap.api.maps.AMap
 import com.amap.api.maps.CameraUpdateFactory
 import com.amap.api.maps.LocationSource
 import com.amap.api.maps.MapView
+import com.amap.api.maps.model.BitmapDescriptorFactory
 import com.amap.api.maps.model.LatLng
+import com.amap.api.maps.model.MarkerOptions
 import com.amap.api.maps.model.MyLocationStyle
 import com.amap.api.maps.model.MyLocationStyle.LOCATION_TYPE_LOCATE
 import com.google.gson.Gson
+import pl.droidsonroids.gif.GifImageView
 import wendu.webviewjavascriptbridge.WVJBWebView
 
 
@@ -71,6 +76,7 @@ class MapActivity : WebViewActivity(), LocationSource, AMapLocationListener {
         })
         mWebView.registerHandler("setMap", WVJBWebView.WVJBHandler<Any?, Any?> { data, function ->
             Log.i(tag, "js call set Map")
+            Log.i(tag, data.toString())
             val data = Gson().fromJson(data.toString(), MapData::class.java)
             val mViewMap = findViewById<RelativeLayout>(R.id.view_map)
             mViewMap?.let {
@@ -99,6 +105,24 @@ class MapActivity : WebViewActivity(), LocationSource, AMapLocationListener {
                 function.onResult(json(1, null, "set map successfully"))
             }
         })
+        // 地图标记
+        mWebView.registerHandler("markMap", WVJBWebView.WVJBHandler<Any?, Any?> { data, function ->
+            Log.i(tag, "js call mark Map")
+            Log.i(tag, data.toString())
+            val data = Gson().fromJson(data.toString(), MarkData::class.java)
+
+            val markerOption = MarkerOptions()
+            markerOption.draggable(false) //设置Marker可拖动
+            markerOption.position(LatLng(data.latitude, data.longitude))
+            markerOption.title(data.title).snippet(data.desc)
+            markerOption.icon(BitmapDescriptorFactory.fromBitmap(base64ToBitmap(data.icon)))
+            // 将Marker设置为贴地显示，可以双指下拉地图查看效果
+            // 将Marker设置为贴地显示，可以双指下拉地图查看效果
+            markerOption.isFlat = true //设置marker平贴地图效果
+            Log.i(tag, "start to mark")
+            aMap?.addMarker(markerOption)
+            function.onResult(json(1, null, "set map mark successfully"))
+        })
     }
 
     // init the map and location
@@ -115,6 +139,8 @@ class MapActivity : WebViewActivity(), LocationSource, AMapLocationListener {
             it.myLocationStyle = myLocationStyle
             it.uiSettings.isMyLocationButtonEnabled = true
             it.setOnMyLocationChangeListener {}
+            it.showIndoorMap(true)
+            it.showBuildings(true)
         }
         //myLocationStyle.myLocationType(MyLocationStyle.LOCATION_TYPE_FOLLOW)
         myLocationStyle.showMyLocation(true)
@@ -183,6 +209,13 @@ class MapActivity : WebViewActivity(), LocationSource, AMapLocationListener {
                 toast(R.string.location_error)
                 Log.e("定位AmapErr", errText)
             }
+        }
+    }
+
+    override fun onLoadFinish() {
+        super.onLoadFinish()
+        findViewById<GifImageView>(R.id.loading_view)?.let {
+            Animation().fadeOut(it as View)
         }
     }
 
