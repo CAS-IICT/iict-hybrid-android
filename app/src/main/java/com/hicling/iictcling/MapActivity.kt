@@ -85,7 +85,7 @@ class MapActivity : WebViewActivity(), LocationSource, AMapLocationListener {
                 windowManager.defaultDisplay.getMetrics(outMetrics)
                 // 地图大小禁止大于屏幕大小
                 if (data.width > outMetrics.widthPixels) data.width = outMetrics.widthPixels
-                if (data.height > outMetrics.widthPixels) data.height = outMetrics.heightPixels
+                if (data.height > outMetrics.heightPixels) data.height = outMetrics.heightPixels
 
                 val margin = MarginLayoutParams(it.layoutParams)
                 margin.setMargins(data.left, data.top, data.right, data.bottom)
