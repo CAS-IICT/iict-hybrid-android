@@ -41,7 +41,6 @@ class MainActivity : WebViewActivity() {
         findViewById<WVJBWebView>(R.id.webview)?.let {
             mWebView = it
             initWebView(it)
-            initBridge(it)
             //initCling()
         }
     }
@@ -144,8 +143,9 @@ class MainActivity : WebViewActivity() {
     }
 
     // these bridge functions can only used in this activity, not global and general
-    private fun initBridge(mWebView: WVJBWebView) {
-        Log.i(tag, "Init clingsdk in bridge")
+    override fun initBridge(mWebView: WVJBWebView) {
+        super.initBridge(mWebView)
+        Log.i(tag, "MainActivity: initBridge")
         // sdk sign in
         mWebView.registerHandler("signIn", WVJBHandler<Any?, Any?> { data, function ->
             Log.i(tag, "js call signIn")

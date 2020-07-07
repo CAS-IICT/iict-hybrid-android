@@ -6,5 +6,6 @@
         <!-- Customize your theme here. -->
     </style>
 
-    <style name="TranslucentTheme" parent="android:Theme.DeviceDefault.Light.NoActionBar"></style>
+    <style name="TranslucentTheme" parent="android:Theme.DeviceDefault.Light.NoActionBar">
+    </style>
 </resources>

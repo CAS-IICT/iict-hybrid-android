@@ -57,9 +57,9 @@ import java.io.IOException
 @SuppressLint("Registered")
 open class WebViewActivity : Activity() {
 
-    //open var url = "http://192.168.1.79:8080"
+    open var url = "http://192.168.1.79:8080"
 
-    open var url = "http://192.168.1.103:8080" //前端
+    //open var url = "http://192.168.1.103:8080" //前端
     open val tag: String = this.javaClass.simpleName
     private var loading: Boolean = false
     private val content: Int = R.layout.activity_webview // overridable
@@ -203,8 +203,8 @@ open class WebViewActivity : Activity() {
     @Suppress("RECEIVER_NULLABILITY_MISMATCH_BASED_ON_JAVA_ANNOTATIONS")
     @SuppressLint("MissingPermission")
     @TargetApi(Build.VERSION_CODES.LOLLIPOP)
-    private fun initBridge(mWebView: WVJBWebView) {
-        Log.i(tag, "initBridgeFunc")
+    open fun initBridge(mWebView: WVJBWebView) {
+        Log.i(tag, "WebViewActivity: initBridge")
         // back
         mWebView.registerHandler("back", WVJBWebView.WVJBHandler<Any?, Any?> { _, function ->
             Log.i(tag, "js call back")
@@ -248,18 +248,29 @@ open class WebViewActivity : Activity() {
         mWebView.registerHandler(
             "setStatusBar",
             WVJBWebView.WVJBHandler<Any?, Any?> { data, function ->
-                Log.i(tag, "js call set navbar")
+                Log.i(tag, "js call set status bar")
                 Log.i(tag, data.toString())
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                    Log.i(tag, "call set navbar success")
                     val data = Gson().fromJson(data.toString(), StatusBarData::class.java)
-                    val color = Color.parseColor(data.color)
-                    Log.i(tag, color.toString())
-                    this.window.statusBarColor = color
-                    function.onResult(json(1))
+                    // set background
+                    data.background?.let {
+                        val color = Color.parseColor(data.background)
+                        this.window.statusBarColor = color
+                        function.onResult(json(1))
+                    }
+                    data.color?.let {
+                        val decor: View = this.window.decorView
+                        if (data.color == "dark") {
+                            decor.systemUiVisibility =
+                                View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR
+                        } else {
+                            decor.systemUiVisibility =
+                                View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+                        }
+                    }
                 } else {
-                    Log.i(tag, "call set navbar fail")
-                    function.onResult(json(0, null, "Low Version, need more than Android5.0"))
+                    Log.i(tag, "call set status bar fail")
+                    function.onResult(json(0, null, "Low Version, need more than Android 5.0"))
                 }
             })
         // start a new webview activity and go to the specified url
@@ -674,6 +685,7 @@ open class WebViewActivity : Activity() {
             null
         }
     }
+
     // base64 to bitmap
     open fun base64ToBitmap(base64Data: String?): Bitmap? {
         val bytes =

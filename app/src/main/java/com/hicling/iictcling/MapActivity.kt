@@ -1,8 +1,6 @@
 package com.hicling.iictcling
 
-import android.graphics.BitmapFactory
 import android.os.Bundle
-import android.provider.SyncStateContract
 import android.util.DisplayMetrics
 import android.util.Log
 import android.view.View
@@ -20,7 +18,6 @@ import com.amap.api.maps.model.BitmapDescriptorFactory
 import com.amap.api.maps.model.LatLng
 import com.amap.api.maps.model.MarkerOptions
 import com.amap.api.maps.model.MyLocationStyle
-import com.amap.api.maps.model.MyLocationStyle.LOCATION_TYPE_LOCATE
 import com.google.gson.Gson
 import pl.droidsonroids.gif.GifImageView
 import wendu.webviewjavascriptbridge.WVJBWebView
@@ -44,9 +41,8 @@ class MapActivity : WebViewActivity(), LocationSource, AMapLocationListener {
         val path = bundle?.getString("path")
         // init web view
         findViewById<WVJBWebView>(R.id.webview)?.let {
-            mWebView = it
             initWebView(it, false, url + path)
-            initBridge(it)
+            mWebView = it
         }
         // init map view
         findViewById<MapView>(R.id.map)?.let {
@@ -55,7 +51,10 @@ class MapActivity : WebViewActivity(), LocationSource, AMapLocationListener {
         }
     }
 
-    private fun initBridge(mWebView: WVJBWebView) {
+    // 继承并注册更多bridge functions
+    override fun initBridge(mWebView: WVJBWebView) {
+        super.initBridge(mWebView)
+        Log.i(tag, "MapActivity: initBridge")
         // zoom map camera size
         mWebView.registerHandler("zoomMap", WVJBWebView.WVJBHandler<Any?, Any?> { data, function ->
             Log.i(tag, "js call zoom map")
@@ -135,9 +134,8 @@ class MapActivity : WebViewActivity(), LocationSource, AMapLocationListener {
             it.moveCamera(CameraUpdateFactory.zoomTo(12f))
             it.setLocationSource(this)
             it.isMyLocationEnabled = true
-            it.setMyLocationType(LOCATION_TYPE_LOCATE)
             it.myLocationStyle = myLocationStyle
-            it.uiSettings.isMyLocationButtonEnabled = true
+            //it.uiSettings.isMyLocationButtonEnabled = true
             it.setOnMyLocationChangeListener {}
             it.showIndoorMap(true)
             it.showBuildings(true)

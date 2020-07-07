@@ -38,11 +38,7 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/AppTheme"
-        android:usesCleartextTraffic="true"
-        tools:targetApi="l">
-        <activity
-            android:name=".MapActivity"
-            android:theme="@style/TranslucentTheme"></activity>
+        android:usesCleartextTraffic="true">
 
         <meta-data
             android:name="com.amap.api.v2.apikey"
@@ -70,6 +66,7 @@
         <activity
             android:name="com.linchaolong.android.imagepicker.cropper.CropImageActivity"
             android:theme="@style/Base.Theme.AppCompat"
+            android:screenOrientation="portrait"
             tools:ignore="Instantiatable" />
         <activity
             android:name=".MainActivity"
@@ -83,6 +80,10 @@
         <activity
             android:name=".WebViewActivity"
             android:screenOrientation="portrait" />
+        <activity
+            android:name=".MapActivity"
+            android:screenOrientation="portrait"
+            android:theme="@style/TranslucentTheme"></activity>
     </application>
 
 </manifest>
