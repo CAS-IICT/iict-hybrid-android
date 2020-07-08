@@ -57,9 +57,9 @@ import java.io.IOException
 @SuppressLint("Registered")
 open class WebViewActivity : Activity() {
 
-    open var url = "http://192.168.1.79:8080"
+    //open var url = "http://192.168.1.79:8080"
 
-    //open var url = "http://192.168.1.103:8080" //前端
+    open var url = "http://192.168.1.103:8080" //前端
     open val tag: String = this.javaClass.simpleName
     private var loading: Boolean = false
     private val content: Int = R.layout.activity_webview // overridable
@@ -256,18 +256,22 @@ open class WebViewActivity : Activity() {
                     data.background?.let {
                         val color = Color.parseColor(data.background)
                         this.window.statusBarColor = color
-                        function.onResult(json(1))
                     }
                     data.color?.let {
                         val decor: View = this.window.decorView
                         if (data.color == "dark") {
-                            decor.systemUiVisibility =
-                                View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR
+                            decor.systemUiVisibility = View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR
                         } else {
-                            decor.systemUiVisibility =
-                                View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+                            decor.systemUiVisibility = View.SYSTEM_UI_FLAG_LAYOUT_STABLE
                         }
                     }
+                    function.onResult(
+                        json(
+                            1,
+                            null,
+                            "set status bar successfully, color:${data.color}, bg:${data.background}"
+                        )
+                    )
                 } else {
                     Log.i(tag, "call set status bar fail")
                     function.onResult(json(0, null, "Low Version, need more than Android 5.0"))
