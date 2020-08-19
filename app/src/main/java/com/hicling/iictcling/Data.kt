@@ -1,5 +1,7 @@
 package com.hicling.iictcling
 
+import android.os.ParcelUuid
+
 /******
 This file is for all data class use as models or we say old java beans.
 
@@ -15,6 +17,7 @@ data class SignInData(val username: String?, val password: String?)
 data class SignUpData(val username: String?, val password: String?, val rePassword: String?)
 data class ResData(val status: Int?, val data: Any?, val msg: String?)
 data class TimeData(val time: Long = 10000)
+data class ScanBleData(val time: Long = 10000, val lowPower: Boolean = false)
 data class CropperData(
     val title: String = "",
     val base64: Boolean = true,
@@ -64,6 +67,7 @@ data class BleDeviceData(
     val name: String?,
     val rssi: Int?,
     val type: Int?,
+    val uuids: ArrayList<String>?,
     val bondState: Int?,
     val time: Long?
 

@@ -17,9 +17,13 @@ import android.annotation.TargetApi
 import android.app.Activity
 import android.app.AlertDialog
 import android.bluetooth.BluetoothAdapter
+import android.bluetooth.BluetoothDevice
 import android.bluetooth.le.ScanCallback
 import android.bluetooth.le.ScanResult
+import android.content.BroadcastReceiver
+import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
@@ -48,18 +52,22 @@ import com.google.gson.Gson
 import com.linchaolong.android.imagepicker.ImagePicker
 import com.linchaolong.android.imagepicker.cropper.CropImage
 import com.linchaolong.android.imagepicker.cropper.CropImageView
+import net.vidageek.mirror.dsl.Mirror
 import wendu.webviewjavascriptbridge.WVJBWebView
 import java.io.ByteArrayOutputStream
 import java.io.IOException
+import java.net.NetworkInterface
+import java.util.*
+import kotlin.collections.ArrayList
 
 
 @Suppress("DEPRECATION")
 @SuppressLint("Registered")
 open class WebViewActivity : Activity() {
 
-    //open var url = "http://192.168.1.79:8080"
+    open var url = "http://192.168.1.79:8080"
 
-    open var url = "http://192.168.1.103:8080" //前端
+    //open var url = "http://192.168.1.103:8080" //前端
     open val tag: String = this.javaClass.simpleName
     private var loading: Boolean = false
     private val content: Int = R.layout.activity_webview // overridable
@@ -70,6 +78,9 @@ open class WebViewActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         getPermission()
+        getWifiMac()
+        getBleMac()
+        getBleUUID()
         val bundle = this.intent.extras
         bundle?.getBoolean("loading")?.let { loading = it }
         // 当有url传入的时候在本类中直接调用initWebView，该类一般不被继承了
@@ -90,7 +101,7 @@ open class WebViewActivity : Activity() {
         otherUrl: String? = null
     ) {
         if (otherUrl != null) url = otherUrl
-        Log.i(tag, "initWebView: $otherUrl")
+        Log.i(tag, "initWebView: $url")
         showLoading(loading)
         val webSettings: WebSettings = mWebView.settings
 
@@ -134,44 +145,34 @@ open class WebViewActivity : Activity() {
                 Log.i(tag, "Webview finish loading: $url")
             }
 
-            override fun onReceivedError(
-                view: WebView?,
-                request: WebResourceRequest?,
-                error: WebResourceError?
-            ) {
-                Log.i(tag, "onReceivedError")
-                //view?.loadUrl("file:///android_asset/error.html")
-                //onLoadError()
-                super.onReceivedError(view, request, error)
-            }
-
             override fun onReceivedHttpError(
                 view: WebView?,
                 request: WebResourceRequest?,
                 errorResponse: WebResourceResponse?
             ) {
                 Log.i(tag, "onReceivedHttpError")
-                view?.loadUrl("file:///android_asset/error.html")
+                //view?.loadUrl("file:///android_asset/error.html")
                 onLoadError()
                 super.onReceivedHttpError(view, request, errorResponse)
             }
         }
+
         // deal with error page for android < 6.0 mash
         mWebView.webChromeClient = object : WebChromeClient() {
             override fun onReceivedTitle(view: WebView, title: String) {
-                if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
-                    if (title.contains("404")
-                        || title.contains("500")
-                        || title.contains("Error")
-                        || title.contains("找不到网页")
-                        || title.contains("网页无法打开")
-                        || title.contains("not available")
-                    ) {
-                        Log.i(tag, "title find error, android<6.0")
-                        view.loadUrl("file:///android_asset/error.html")
-                        onLoadError()
-                        super.onReceivedTitle(view, title)
-                    }
+                Log.i(tag, "$title")
+                if (title.contains("404")
+                    || title.contains("找不到")
+                    || title.contains("Error")
+                    || title.contains("500")
+                    || title.contains("无法打开")
+                    || title.contains("not available")
+                    || title.contains("not found")
+                ) {
+                    Log.i(tag, "title find error, android<6.0")
+                    view.loadUrl("file:///android_asset/error.html")
+                    onLoadError()
+                    super.onReceivedTitle(view, title)
                 }
             }
 
@@ -192,6 +193,73 @@ open class WebViewActivity : Activity() {
                 function.onResult(json(1, url, "refresh the error page"))
             })
         showLoading(false)
+    }
+
+    // 获取mac地址
+    open fun getWifiMac(): String {
+        try {
+            Log.i(
+                "ble",
+                Settings.Secure.getString(applicationContext.contentResolver, "bluetooth_address")
+            )
+            val all = Collections.list(NetworkInterface.getNetworkInterfaces())
+            for (nif in all) {
+                if (!nif.name.equals("wlan0", ignoreCase = true)) continue
+
+                val macBytes = nif.hardwareAddress ?: return ""
+
+                val res1 = StringBuilder()
+                for (b in macBytes) {
+                    //res1.append(Integer.toHexString(b & 0xFF) + ":");
+                    res1.append(String.format("%02X:", b))
+                }
+
+                if (res1.isNotEmpty()) {
+                    res1.deleteCharAt(res1.length - 1)
+                }
+                Log.i("wlan0", res1.toString())
+                return res1.toString()
+            }
+        } catch (e: Exception) {
+            Log.i("error", e.message)
+        }
+
+        return "02:00:00:00:00:00"
+    }
+
+    open fun getBleMac(): String {
+        try {
+            val bluetoothAdapter = BluetoothAdapter.getDefaultAdapter()
+            val bluetoothManagerService = Mirror().on(bluetoothAdapter).get().field("mService")
+            if (bluetoothManagerService == null) {
+                Log.w(tag, "no bluetoothManagerService")
+                return "02:00:00:00:00:00"
+            }
+            val address =
+                Mirror().on(bluetoothManagerService).invoke().method("getAddress").withoutArgs()
+            return if (address != null && address is String) {
+                Log.i("BleMac", address.toString())
+                address.toString()
+            } else "02:00:00:00:00:00"
+        } catch (e: Exception) {
+            Log.i("BleMacError", e.message)
+            return "02:00:00:00:00:00"
+        }
+    }
+
+    open fun getBleUUID(): ArrayList<String> {
+        val list = ArrayList<String>()
+        try {
+            val bluetoothAdapter = BluetoothAdapter.getDefaultAdapter()
+            val uuids =
+                Mirror().on(bluetoothAdapter).invoke().method("getUuids").withoutArgs() as Array<*>
+            for (uuid in uuids) {
+                list.add(uuid.toString())
+            }
+        } catch (e: Exception) {
+            Log.e("uuid_error", e.message)
+        }
+        return list
     }
 
     // give standard response as JSON to frontend
@@ -313,35 +381,49 @@ open class WebViewActivity : Activity() {
         mWebView.registerHandler("scanBle", WVJBWebView.WVJBHandler<Any?, Any?> { data, function ->
             Log.i(tag, "js call scanBle")
             Log.i(tag, data.toString())
-            val data = Gson().fromJson(data.toString(), TimeData::class.java)
+            val data = Gson().fromJson(data.toString(), ScanBleData::class.java)
             if (checkBle()) {
-                val scanCallback = object : ScanCallback() {
+                // 整理并向前端发送扫描到的设备
+                fun bleCallFrontEnd(device: BluetoothDevice, rssi: Int) {
+                    // 过滤无名设备
+                    if (device.name == null) return
+                    val uuids = device.uuids
+                    val list = ArrayList<String>()
+                    uuids?.let {
+                        for (uuid in uuids) {
+                            list.add(uuid.toString())
+                        }
+                    }
+                    val data = BleDeviceData(
+                        device.address,
+                        device.name,
+                        rssi,
+                        device.type,
+                        list,
+                        device.bondState,
+                        System.currentTimeMillis() / 1000
+                        //it.timestampNanos
+                    )
+                    mWebView.callHandler("BleOnScanResult", json(1, data))
+                }
+                // 低功耗蓝牙的扫描回调
+                val scanLowCallback = object : ScanCallback() {
                     override fun onScanResult(callbackType: Int, result: ScanResult?) {
                         super.onScanResult(callbackType, result)
-                        val msg = "BleScan results"
-                        Log.i(tag, msg)
-                        Log.i(tag, result.toString())
+                        Log.i("onScanResult", result.toString())
                         result?.let {
                             val device = it.device
-                            val data = BleDeviceData(
-                                device.address,
-                                device.name,
-                                device.type,
-                                device.bondState,
-                                it.rssi,
-                                it.timestampNanos
-                            )
-                            mWebView.callHandler("BleOnScanResult", json(1, data))
+                            bleCallFrontEnd(device, it.rssi)
                         }
                     }
 
+                    /*
                     override fun onBatchScanResults(results: MutableList<ScanResult>?) {
                         super.onBatchScanResults(results)
-                        val msg = "Batch Scan Results"
-                        Log.i(tag, msg)
-                        Log.i(tag, results.toString())
+                        Log.i("onBatchScanResults", results.toString())
                         mWebView.callHandler("BleOnBatchScanResult", json(1, results))
                     }
+                    */
 
                     override fun onScanFailed(errorCode: Int) {
                         super.onScanFailed(errorCode)
@@ -351,16 +433,69 @@ open class WebViewActivity : Activity() {
                         mWebView.callHandler("BleOnScanFailed", json(0, errorCode))
                     }
                 }
-                // 已经开始扫描
-                function.onResult(json(1, null, " start scan Ble"))
-                val scanner = BluetoothAdapter.getDefaultAdapter().bluetoothLeScanner
-                Log.i(tag, "start scan for ${data.time / 1000}s")
-                scanner.startScan(scanCallback)
-                // 定时关闭蓝牙扫描
-                handler.postDelayed({
-                    scanner.stopScan(scanCallback)
-                    Log.i(tag, "stop scan Ble")
-                }, data.time)
+                // 传统蓝牙扫描的回调
+                val scanCallback: BroadcastReceiver = object : BroadcastReceiver() {
+                    override fun onReceive(context: Context?, intent: Intent) {
+                        val action = intent.action
+                        when {
+                            action.equals(BluetoothDevice.ACTION_FOUND, ignoreCase = true) -> {
+                                // device found
+                                val device =
+                                    intent.getParcelableExtra<BluetoothDevice>(BluetoothDevice.EXTRA_DEVICE)
+                                val rssi = intent.getShortExtra(BluetoothDevice.EXTRA_RSSI, 0)
+                                device.fetchUuidsWithSdp()
+                                val uuid =
+                                    intent.getParcelableArrayExtra(BluetoothDevice.EXTRA_UUID)
+                                if(uuid==null) Log.i("null","null uuid")
+                                bleCallFrontEnd(device, rssi.toInt())
+                            }
+                            action.equals(
+                                BluetoothAdapter.ACTION_DISCOVERY_FINISHED,
+                                ignoreCase = true
+                            ) -> {
+                                // discoveryFinished
+                                Log.i("BleScan", "Finish Discovery")
+                            }
+                            action.equals(
+                                BluetoothAdapter.ACTION_DISCOVERY_STARTED, ignoreCase = true
+                            ) -> {
+                                Log.i("BleScan", "Start Discovery")
+                            }
+                        }
+                    }
+                }
+
+                if (data.lowPower) {
+                    // 已经开始扫描，低功耗蓝牙
+                    function.onResult(json(1, null, " start scan Ble in low power"))
+                    val scanner = BluetoothAdapter.getDefaultAdapter().bluetoothLeScanner
+                    Log.i(tag, "start low power Ble scan for ${data.time / 1000}s")
+                    scanner.startScan(scanLowCallback)
+                    // 定时关闭蓝牙扫描
+                    handler.postDelayed({
+                        scanner.stopScan(scanLowCallback)
+                        Log.i(tag, "stop scan Ble")
+                    }, data.time)
+                } else {
+                    // 已经开始扫描，普通蓝牙
+                    function.onResult(json(1, null, " start scan Ble in all"))
+                    val scanner = BluetoothAdapter.getDefaultAdapter()
+                    Log.i(tag, "start discovery, all Ble devices")
+                    val filter = IntentFilter()
+                    filter.addAction(BluetoothDevice.ACTION_FOUND)
+                    filter.addAction(BluetoothAdapter.ACTION_DISCOVERY_FINISHED)
+                    filter.addAction(BluetoothAdapter.ACTION_DISCOVERY_STARTED)
+                    this.registerReceiver(scanCallback, filter)
+                    scanner.startDiscovery()
+                }
+            } else {
+                function.onResult(
+                    json(
+                        0,
+                        null,
+                        "Bluetooth is not available, please turn on Bluetooth"
+                    )
+                )
             }
         })
         // get location position, 统一只使用高德

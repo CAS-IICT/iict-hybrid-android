@@ -25,6 +25,9 @@
     <uses-permission android:name="android.permission.CHANGE_WIFI_STATE" />
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
     <uses-permission android:name="android.permission.ACCESS_LOCATION_EXTRA_COMMANDS" />
+    <uses-permission android:name="android.permission.LOCAL_MAC_ADDRESS"
+        tools:ignore="ProtectedPermissions" />
+
     <uses-permission
         android:name="android.permission.READ_LOGS"
         tools:ignore="ProtectedPermissions" />
@@ -45,6 +48,7 @@
             android:value="20d318f31afd8525cf194f33c8f11a80" />
 
         <service android:name="com.amap.api.location.APSService" />
+
         <service
             android:name="com.hicling.clingsdk.bleservice.ClingCommunicatorService"
             android:enabled="true" />
