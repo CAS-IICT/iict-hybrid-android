@@ -47,13 +47,12 @@ dependencies {
     implementation 'com.wang.avi:library:2.1.3'
 
     //noinspection GradleCompatible
-    implementation 'com.android.support:appcompat-v7:28.0.0'
     implementation "com.linchaolong.android:imagepicker:1.5"
     //implementation 'com.amap.api:map2d:6.0.0'
     implementation 'pl.droidsonroids.gif:android-gif-drawable:1.2.7'
     implementation 'com.amap.api:3dmap:latest.integration'
-    implementation 'com.amap.api:search:latest.integration'
-    implementation 'com.amap.api:location:latest.integration'
+    implementation 'com.amap.api:search:7.4.0'
+    implementation 'com.amap.api:location:5.1.0'
     implementation 'net.vidageek:mirror:1.6.1'
 
 }

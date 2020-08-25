@@ -43,6 +43,7 @@ class MapActivity : WebViewActivity(), LocationSource, AMapLocationListener {
         findViewById<WVJBWebView>(R.id.webview)?.let {
             initWebView(it, false, url + path)
             mWebView = it
+            initBridge(it)
         }
         // init map view
         findViewById<MapView>(R.id.map)?.let {
@@ -149,6 +150,7 @@ class MapActivity : WebViewActivity(), LocationSource, AMapLocationListener {
         //在activity执行onDestroy时执行mMapView.onDestroy()，销毁地图
         mMapView?.onDestroy()
         mLocationClient?.onDestroy()
+        mWebView?.destroy()
     }
 
     override fun onResume() {

@@ -47,7 +47,7 @@
             android:name="com.amap.api.v2.apikey"
             android:value="20d318f31afd8525cf194f33c8f11a80" />
 
-        <service android:name="com.amap.api.location.APSService" />
+        <service android:name="com.amap.api.location.APSService" android:enabled="true" android:process=":remote"/>
 
         <service
             android:name="com.hicling.clingsdk.bleservice.ClingCommunicatorService"

@@ -17,6 +17,7 @@ data class SignInData(val username: String?, val password: String?)
 data class SignUpData(val username: String?, val password: String?, val rePassword: String?)
 data class ResData(val status: Int?, val data: Any?, val msg: String?)
 data class TimeData(val time: Long = 10000)
+data class Mac(val bluetooth: String = "", val wifi: String = "")
 data class ScanBleData(val time: Long = 10000, val lowPower: Boolean = false)
 data class CropperData(
     val title: String = "",
