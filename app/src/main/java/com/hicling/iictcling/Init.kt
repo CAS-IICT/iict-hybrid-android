@@ -169,7 +169,13 @@ class Init {
             }
         })
 
-        // scan bluetooth devices
+        /* scan bluetooth devices
+         *注意1：android 10之后无法再获取Bluetooth Mac地址
+         *注意2：android 5.1之后支持蓝牙广播，将蓝牙作为服务器，可以发送UUID等信息，无需连接，仅限lowpower mode
+         *注意3：范围：传统蓝牙模式 > lowpower mode
+         *注意4：传统蓝牙模式扫描无法获取UUID，可以获取mac，lowpower全都可以获取
+         *注意5：方案：针对android 5.1以下采用传统扫描方式，获取MAC地址
+         */
         mWebView.registerHandler("scanBle", WVJBWebView.WVJBHandler<Any?, Any?> { data, function ->
             Log.i(tag, "js call scanBle")
             Log.i(tag, data.toString())
@@ -191,7 +197,7 @@ class Init {
                             list.add(uuid.toString())
                         }
                     }
-                    // low power uuid，可以获得serviceuuid
+                    // low power uuid，可以获得serviceUuid
                     serviceUuids?.let {
                         for (uuid in it) {
                             list.add(uuid.toString())
@@ -208,40 +214,12 @@ class Init {
                         //it.timestampNanos
                     )
                     activity.bleDeviceHash[device.address] = device
-                    mWebView.callHandler("BleOnScanResult", activity.json(1, data))
+                    mWebView.callHandler(
+                        "BleOnScanResult",
+                        activity.json(1, data, "Scan Bluetooth device: ${device.name}")
+                    )
                 }
 
-                // 传统蓝牙扫描的回调
-                val scanCallback: BroadcastReceiver = object : BroadcastReceiver() {
-                    override fun onReceive(context: Context?, intent: Intent) {
-                        val action = intent.action
-                        when {
-                            action.equals(BluetoothDevice.ACTION_FOUND, ignoreCase = true) -> {
-                                // device found
-                                val device =
-                                    intent.getParcelableExtra<BluetoothDevice>(BluetoothDevice.EXTRA_DEVICE)
-                                val rssi = intent.getShortExtra(BluetoothDevice.EXTRA_RSSI, 0)
-                                device.fetchUuidsWithSdp()
-                                val uuid =
-                                    intent.getParcelableArrayExtra(BluetoothDevice.EXTRA_UUID)
-                                if (uuid == null) Log.i("null", "null uuid")
-                                bleCallFrontEnd(device, rssi.toInt())
-                            }
-                            action.equals(
-                                BluetoothAdapter.ACTION_DISCOVERY_FINISHED,
-                                ignoreCase = true
-                            ) -> {
-                                // discoveryFinished
-                                Log.i("BleScan", "Finish Discovery")
-                            }
-                            action.equals(
-                                BluetoothAdapter.ACTION_DISCOVERY_STARTED, ignoreCase = true
-                            ) -> {
-                                Log.i("BleScan", "Start Discovery")
-                            }
-                        }
-                    }
-                }
 
                 if (data.lowPower && Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
                     // 低功耗蓝牙的扫描回调
@@ -265,7 +243,7 @@ class Init {
                         }
                     }
                     // 已经开始扫描，低功耗蓝牙
-                    function.onResult(activity.json(1, null, " start scan Ble in low power"))
+                    function.onResult(activity.json(1, null, "Start scan Ble in low power"))
                     val scanner = BluetoothAdapter.getDefaultAdapter().bluetoothLeScanner
                     Log.i(tag, "start low power Ble scan for ${data.time / 1000}s")
                     scanner.startScan(scanLowCallback)
@@ -275,8 +253,43 @@ class Init {
                         Log.i(tag, "stop scan Ble")
                     }, data.time)
                 } else {
+                    // 传统蓝牙扫描的回调
+                    val scanCallback = object : BroadcastReceiver() {
+                        override fun onReceive(context: Context?, intent: Intent) {
+                            val action = intent.action
+                            when {
+                                action.equals(BluetoothDevice.ACTION_FOUND, ignoreCase = true) -> {
+                                    // device found
+                                    val device =
+                                        intent.getParcelableExtra<BluetoothDevice>(BluetoothDevice.EXTRA_DEVICE)
+                                    val rssi = intent.getShortExtra(BluetoothDevice.EXTRA_RSSI, 0)
+                                    bleCallFrontEnd(device, rssi.toInt())
+                                }
+                                action.equals(
+                                    BluetoothAdapter.ACTION_DISCOVERY_FINISHED, ignoreCase = true
+                                ) -> {
+                                    // discoveryFinished
+                                    Log.i("BleScan", "Finish Discovery")
+                                    mWebView.callHandler(
+                                        "BleFinishDiscovery",
+                                        activity.json(1, null, "Finish Discovery")
+                                    )
+                                }
+                                action.equals(
+                                    BluetoothAdapter.ACTION_DISCOVERY_STARTED, ignoreCase = true
+                                ) -> {
+                                    mWebView.callHandler(
+                                        "BleStartDiscovery",
+                                        activity.json(1, null, "Start Discovery")
+                                    )
+                                    Log.i("BleScan", "Start Discovery")
+                                }
+                            }
+                        }
+                    }
+
                     // 已经开始扫描，普通蓝牙
-                    function.onResult(activity.json(1, null, " start scan Ble in all"))
+                    function.onResult(activity.json(1, null, "Start scan Ble in all"))
                     val scanner = BluetoothAdapter.getDefaultAdapter()
                     Log.i(tag, "start discovery, all Ble devices")
                     val filter = IntentFilter()
@@ -291,11 +304,12 @@ class Init {
                     activity.json(
                         0,
                         null,
-                        "Bluetooth is not available, please turn on Bluetooth"
+                        "Bluetooth is not available, please turn on Bluetooth and check your device!"
                     )
                 )
             }
         })
+
         // get location position, 统一只使用高德
         mWebView.registerHandler("location", WVJBWebView.WVJBHandler<Any?, Any?> { data, function ->
             Log.i(tag, "js call get location")
