@@ -120,6 +120,14 @@ class Init {
             activity.goWebView(data.url, data.loading)
             function.onResult(activity.json(1, null, data.url))
         })
+        // get local uuid
+        mWebView.registerHandler(
+            "getLocalUuid",
+            WVJBWebView.WVJBHandler<Any?, Any?> { _, function ->
+                Log.i(tag, "js call get local uuid")
+                val uuids = activity.getLocalUUID()
+                function.onResult(activity.json(1, uuids, "local uuids"))
+            })
         // check bluetooth device status
         mWebView.registerHandler("checkBle", WVJBWebView.WVJBHandler<Any?, Any?> { _, function ->
             Log.i(tag, "js call checkBle")
@@ -145,25 +153,29 @@ class Init {
             }
         })
 
-        mWebView.registerHandler("setGATT", WVJBWebView.WVJBHandler<Any?, Any?> { _, function ->
+        mWebView.registerHandler("setGATT", WVJBWebView.WVJBHandler<Any?, Any?> { data, function ->
             Log.i(tag, "js call set GATT")
+            Log.i(tag, data.toString())
+            val data = Gson().fromJson(data.toString(), GATTData::class.java)
             if (activity.checkBle()) {
                 val uuids = activity.setUuids()
-                Log.i("UUIDS", uuids.toString())
-                activity.initGATT(uuids)
-                function.onResult(
-                    activity.json(
-                        1,
-                        Gson().toJson(uuids),
-                        "GATT Ble broadcast server starts"
+                val name = activity.getBleName()
+                val mac = activity.getBleMac()
+                val data2 = BleInfoData(name, mac, uuids) // 自己的蓝牙信息
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                    activity.initGATT(uuids, data.message)
+                    function.onResult(
+                        activity.json(1, data2, "GATT Ble broadcast server starts")
                     )
-                )
+                } else {
+                    function.onResult(
+                        activity.json(0, data2, "GATT broadcast fail to start, Android<5.1")
+                    )
+                }
             } else {
                 function.onResult(
                     activity.json(
-                        0,
-                        null,
-                        "Bluetooth is not available, please turn on Bluetooth"
+                        0, null, "Bluetooth is not available, please turn on Bluetooth"
                     )
                 )
             }

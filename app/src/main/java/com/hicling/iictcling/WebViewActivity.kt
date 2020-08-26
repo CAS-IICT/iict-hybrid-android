@@ -253,6 +253,14 @@ open class WebViewActivity : Activity() {
         return list
     }
 
+    open fun getBleName(): String {
+        return try {
+            BluetoothAdapter.getDefaultAdapter().name
+        } catch (e: Exception) {
+            ""
+        }
+    }
+
     // give standard response as JSON to frontend
     open fun json(status: Int, data: Any? = null, msg: String? = ""): String {
         return Gson().toJson(ResData(status, data, msg))
@@ -278,8 +286,12 @@ open class WebViewActivity : Activity() {
     }
 
     // 初始化广播GATT
+    /*
+     * @uuids 生成的uuid
+     * @data 蓝牙需要携带的信息
+     */
     @TargetApi(Build.VERSION_CODES.LOLLIPOP)
-    fun initGATT(uuids: HashMap<String, UUID>) {
+    fun initGATT(uuids: HashMap<String, UUID>, data: String) {
         val settings: AdvertiseSettings = AdvertiseSettings.Builder()
             .setConnectable(true)
             .build()
@@ -290,6 +302,7 @@ open class WebViewActivity : Activity() {
         val scanResponseData: AdvertiseData = AdvertiseData.Builder()
             .addServiceUuid(ParcelUuid(uuids["uuidServer"]))
             .setIncludeTxPowerLevel(true)
+            .addServiceData(ParcelUuid(uuids["uuidServer"]), data.toByteArray())
             .build()
         val callback: AdvertiseCallback = object : AdvertiseCallback() {
             override fun onStartSuccess(settingsInEffect: AdvertiseSettings?) {

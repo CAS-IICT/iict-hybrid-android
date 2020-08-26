@@ -1,6 +1,9 @@
 package com.hicling.iictcling
 
 import android.os.ParcelUuid
+import java.util.*
+import kotlin.collections.ArrayList
+import kotlin.collections.HashMap
 
 /******
 This file is for all data class use as models or we say old java beans.
@@ -92,4 +95,14 @@ data class MarkData(
     val icon: String?,
     val title: String?,
     val desc: String?
+)
+
+data class BleInfoData(
+    val deviceName: String = "",
+    val mac: String = "",
+    val uuids: HashMap<String, UUID> = HashMap()
+)
+
+data class GATTData(
+    val message: String = ""
 )
