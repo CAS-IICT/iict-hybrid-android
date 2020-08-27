@@ -256,6 +256,10 @@ class Init {
                     }
                     // 已经开始扫描，低功耗蓝牙
                     function.onResult(activity.json(1, null, "Start scan Ble in low power"))
+                    mWebView.callHandler(
+                        "BleStartScan",
+                        activity.json(1, null, "Start Scan")
+                    )
                     val scanner = BluetoothAdapter.getDefaultAdapter().bluetoothLeScanner
                     Log.i(tag, "start low power Ble scan for ${data.time / 1000}s")
                     scanner.startScan(scanLowCallback)
@@ -263,6 +267,10 @@ class Init {
                     handler.postDelayed({
                         scanner.stopScan(scanLowCallback)
                         Log.i(tag, "stop scan Ble")
+                        mWebView.callHandler(
+                            "BleFinishScan",
+                            activity.json(1, null, "Finish Scan")
+                        )
                     }, data.time)
                 } else {
                     // 传统蓝牙扫描的回调
@@ -283,7 +291,7 @@ class Init {
                                     // discoveryFinished
                                     Log.i("BleScan", "Finish Discovery")
                                     mWebView.callHandler(
-                                        "BleFinishDiscovery",
+                                        "BleFinishScan",
                                         activity.json(1, null, "Finish Discovery")
                                     )
                                 }
@@ -291,7 +299,7 @@ class Init {
                                     BluetoothAdapter.ACTION_DISCOVERY_STARTED, ignoreCase = true
                                 ) -> {
                                     mWebView.callHandler(
-                                        "BleStartDiscovery",
+                                        "BleStartScan",
                                         activity.json(1, null, "Start Discovery")
                                     )
                                     Log.i("BleScan", "Start Discovery")
