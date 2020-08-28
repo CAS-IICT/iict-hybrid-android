@@ -27,6 +27,8 @@ import com.linchaolong.android.imagepicker.ImagePicker
 import com.linchaolong.android.imagepicker.cropper.CropImage
 import com.linchaolong.android.imagepicker.cropper.CropImageView
 import wendu.webviewjavascriptbridge.WVJBWebView
+import java.util.*
+import kotlin.collections.ArrayList
 
 class Init {
     open val tag: String = this.javaClass.simpleName
@@ -159,11 +161,15 @@ class Init {
             val data = Gson().fromJson(data.toString(), GATTData::class.java)
             if (activity.checkBle()) {
                 val uuids = activity.setUuids()
+                data.message?.let {
+                    uuids["uuidServer"] = UUID.fromString(it)
+                    Log.i("uuidServer", uuids["uuidServer"].toString())
+                }
                 val name = activity.getBleName()
                 val mac = activity.getBleMac()
                 val data2 = BleInfoData(name, mac, uuids) // 自己的蓝牙信息
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                    activity.initGATT(uuids, data.message)
+                    activity.initGATT(uuids)
                     function.onResult(
                         activity.json(1, data2, "GATT Ble broadcast server starts")
                     )

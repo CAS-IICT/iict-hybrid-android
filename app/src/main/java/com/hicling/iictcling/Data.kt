@@ -104,5 +104,5 @@ data class BleInfoData(
 )
 
 data class GATTData(
-    val message: String = ""
+    val message: String?
 )

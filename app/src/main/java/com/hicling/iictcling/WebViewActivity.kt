@@ -291,9 +291,11 @@ open class WebViewActivity : Activity() {
      * @data 蓝牙需要携带的信息
      */
     @TargetApi(Build.VERSION_CODES.LOLLIPOP)
-    fun initGATT(uuids: HashMap<String, UUID>, data: String) {
+    fun initGATT(uuids: HashMap<String, UUID>) {
         val settings: AdvertiseSettings = AdvertiseSettings.Builder()
-            .setConnectable(true)
+            .setConnectable(false)
+            .setAdvertiseMode(AdvertiseSettings.ADVERTISE_MODE_BALANCED)
+            .setTxPowerLevel(AdvertiseSettings.ADVERTISE_TX_POWER_HIGH)
             .build()
         val advertiseData: AdvertiseData = AdvertiseData.Builder()
             .setIncludeDeviceName(true)
@@ -302,12 +304,12 @@ open class WebViewActivity : Activity() {
         val scanResponseData: AdvertiseData = AdvertiseData.Builder()
             .addServiceUuid(ParcelUuid(uuids["uuidServer"]))
             .setIncludeTxPowerLevel(true)
-            .addServiceData(ParcelUuid(uuids["uuidServer"]), data.toByteArray())
+            //.addServiceData(ParcelUuid(uuids["uuidServer"]), data.toByteArray())
             .build()
         val callback: AdvertiseCallback = object : AdvertiseCallback() {
             override fun onStartSuccess(settingsInEffect: AdvertiseSettings?) {
-                Log.d("initGATT", "Succeed to add BLE ad")
-                startGATT(uuids)
+                Log.i("initGATT", "Succeed to add BLE ad, uuid: ${uuids["uuidServer"]}")
+                //startGATT(uuids)
             }
 
             override fun onStartFailure(errorCode: Int) {
@@ -352,6 +354,7 @@ open class WebViewActivity : Activity() {
             BluetoothGattCharacteristic.PERMISSION_WRITE
         )
         service.addCharacteristic(characteristicWrite)
+        Log.i("services",bluetoothGattServer.services.toString())
         bluetoothGattServer.addService(service)
         Log.i("GATT", "2. initServices ok")
     }
@@ -565,6 +568,12 @@ open class WebViewActivity : Activity() {
     }
 
     override fun onDestroy() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            val mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter()
+            val bluetoothLeAdvertiser: BluetoothLeAdvertiser =
+                mBluetoothAdapter.bluetoothLeAdvertiser
+            bluetoothLeAdvertiser.stopAdvertising(object : AdvertiseCallback() {})
+        }
         super.onDestroy()
         mWebView?.destroy()
     }
