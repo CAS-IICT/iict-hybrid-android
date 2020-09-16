@@ -13,7 +13,7 @@ import android.graphics.Color
 import android.net.Uri
 import android.os.Build
 import android.os.Handler
-import android.os.ParcelUuid
+import android.util.DisplayMetrics
 import android.util.Log
 import android.view.View
 import com.amap.api.location.AMapLocationClient
@@ -28,7 +28,6 @@ import com.linchaolong.android.imagepicker.cropper.CropImage
 import com.linchaolong.android.imagepicker.cropper.CropImageView
 import wendu.webviewjavascriptbridge.WVJBWebView
 import java.util.*
-import kotlin.collections.ArrayList
 
 class Init {
     open val tag: String = this.javaClass.simpleName
@@ -122,6 +121,16 @@ class Init {
             activity.goWebView(data.url, data.loading)
             function.onResult(activity.json(1, null, data.url))
         })
+        // 获取手机屏幕大小
+        mWebView.registerHandler("getWinSize", WVJBWebView.WVJBHandler<Any?, Any?> { _, function ->
+            val manager = activity.windowManager
+            val outMetrics = DisplayMetrics()
+            manager.defaultDisplay.getMetrics(outMetrics)
+            val width = outMetrics.widthPixels
+            val height = outMetrics.heightPixels
+            val data = WinSizeData(width, height)
+            function.onResult(activity.json(1, data, "get window size"))
+        })
         // get local uuid
         mWebView.registerHandler(
             "getLocalUuid",
@@ -143,6 +152,7 @@ class Init {
                 function.onResult(activity.json(0, null, msg))
             }
         })
+
         // turn on bluetooth device
         mWebView.registerHandler("turnOnBle", WVJBWebView.WVJBHandler<Any?, Any?> { _, function ->
             Log.i(tag, "js call turn on Ble")
@@ -180,10 +190,10 @@ class Init {
                 }
             } else {
                 function.onResult(
-                    activity.json(
-                        0, null, "Bluetooth is not available, please turn on Bluetooth"
-                    )
+                    activity.json(0, null, "Bluetooth is not available, please turn on Bluetooth")
                 )
+                val blueAdapter = BluetoothAdapter.getDefaultAdapter()
+                blueAdapter.enable()
             }
         })
 
@@ -199,44 +209,6 @@ class Init {
             Log.i(tag, data.toString())
             val data = Gson().fromJson(data.toString(), ScanBleData::class.java)
             if (activity.checkBle()) {
-                // 整理并向前端发送扫描到的设备
-                fun bleCallFrontEnd(
-                    device: BluetoothDevice,
-                    rssi: Int,
-                    serviceUuids: List<ParcelUuid>? = null
-                ) {
-                    // 过滤无名设备
-                    if (device.name == null) return
-                    val uuids = device.uuids
-                    val list = ArrayList<String>()
-                    // 经典蓝牙uuid，一般获取不到
-                    uuids?.let {
-                        for (uuid in it) {
-                            list.add(uuid.toString())
-                        }
-                    }
-                    // low power uuid，可以获得serviceUuid
-                    serviceUuids?.let {
-                        for (uuid in it) {
-                            list.add(uuid.toString())
-                        }
-                    }
-                    val data = BleDeviceData(
-                        device.address,
-                        device.name,
-                        rssi,
-                        device.type,
-                        list,
-                        device.bondState,
-                        System.currentTimeMillis() / 1000
-                        //it.timestampNanos
-                    )
-                    activity.bleDeviceHash[device.address] = device
-                    mWebView.callHandler(
-                        "BleOnScanResult",
-                        activity.json(1, data, "Scan Bluetooth device: ${device.name}")
-                    )
-                }
 
 
                 if (data.lowPower && Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
@@ -248,7 +220,18 @@ class Init {
                             result?.let {
                                 val device: BluetoothDevice = it.device
                                 val serviceUuids = it.scanRecord?.serviceUuids
-                                bleCallFrontEnd(device, it.rssi, serviceUuids)
+                                val returnData =
+                                    activity.getBleDeviceData(device, it.rssi, serviceUuids)
+                                returnData?.let {
+                                    mWebView.callHandler(
+                                        "BleOnScanResult",
+                                        activity.json(
+                                            1,
+                                            it,
+                                            "Scan Bluetooth device: ${device.name}"
+                                        )
+                                    )
+                                }
                             }
                         }
 
@@ -289,7 +272,17 @@ class Init {
                                     val device =
                                         intent.getParcelableExtra<BluetoothDevice>(BluetoothDevice.EXTRA_DEVICE)
                                     val rssi = intent.getShortExtra(BluetoothDevice.EXTRA_RSSI, 0)
-                                    bleCallFrontEnd(device, rssi.toInt())
+                                    val returnData = activity.getBleDeviceData(device, rssi.toInt())
+                                    returnData?.let {
+                                        mWebView.callHandler(
+                                            "BleOnScanResult",
+                                            activity.json(
+                                                1,
+                                                it,
+                                                "Scan Bluetooth device: ${device.name}"
+                                            )
+                                        )
+                                    }
                                 }
                                 action.equals(
                                     BluetoothAdapter.ACTION_DISCOVERY_FINISHED, ignoreCase = true
@@ -327,11 +320,7 @@ class Init {
                 }
             } else {
                 function.onResult(
-                    activity.json(
-                        0,
-                        null,
-                        "Bluetooth is not available, please turn on Bluetooth and check your device!"
-                    )
+                    activity.json(0, null, "Bluetooth is not available")
                 )
             }
         })

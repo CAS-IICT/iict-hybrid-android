@@ -53,15 +53,13 @@ import kotlin.collections.HashMap
 open class WebViewActivity : Activity() {
 
     open var url = "http://192.168.1.79:8080"
-    //open var url = "http://192.168.1.103:8080" //前端
+    //open var url = "http://192.168.1.210:8080" //前端
 
     open val tag: String = this.javaClass.simpleName
     private var loading: Boolean = false
     private val content: Int = R.layout.activity_webview // overridable
     open var mWebView: WVJBWebView? = null
 
-    // record the devices are scanned
-    open val bleDeviceHash = HashMap<String, BluetoothDevice>()
     private val handler = Handler()
     val imagePicker: ImagePicker = ImagePicker()
 
@@ -88,7 +86,7 @@ open class WebViewActivity : Activity() {
         loading: Boolean = false,
         otherUrl: String? = null
     ) {
-        if (otherUrl != null) url = otherUrl
+        otherUrl?.let { url = it }
         Log.i(tag, "initWebView: $url")
         showLoading(loading)
         val webSettings: WebSettings = mWebView.settings
@@ -157,10 +155,9 @@ open class WebViewActivity : Activity() {
                     || title.contains("not available")
                     || title.contains("not found")
                 ) {
-                    Log.i(tag, "title find error, android<6.0")
+                    super.onReceivedTitle(view, title)
                     view.loadUrl("file:///android_asset/error.html")
                     onLoadError()
-                    super.onReceivedTitle(view, title)
                 }
             }
 
@@ -354,7 +351,7 @@ open class WebViewActivity : Activity() {
             BluetoothGattCharacteristic.PERMISSION_WRITE
         )
         service.addCharacteristic(characteristicWrite)
-        Log.i("services",bluetoothGattServer.services.toString())
+        Log.i("services", bluetoothGattServer.services.toString())
         bluetoothGattServer.addService(service)
         Log.i("GATT", "2. initServices ok")
     }
@@ -565,6 +562,39 @@ open class WebViewActivity : Activity() {
         val bytes =
             Base64.decode(base64Data, Base64.DEFAULT)
         return BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+    }
+
+    // 整理并向前端发送扫描到的设备
+    fun getBleDeviceData(
+        device: BluetoothDevice,
+        rssi: Int,
+        serviceUuids: List<ParcelUuid>? = null
+    ): BleDeviceData? {
+        // 过滤无名设备
+        if (device.name == null) return null
+        val uuids = device.uuids
+        val list = ArrayList<String>()
+        // 经典蓝牙uuid，一般获取不到
+        uuids?.let {
+            for (uuid in it) {
+                list.add(uuid.toString())
+            }
+        }
+        // low power uuid，可以获得serviceUuid
+        serviceUuids?.let {
+            for (uuid in it) {
+                list.add(uuid.toString())
+            }
+        }
+        return BleDeviceData(
+            device.address,
+            device.name,
+            rssi,
+            device.type,
+            list,
+            device.bondState,
+            System.currentTimeMillis() / 1000
+        )
     }
 
     override fun onDestroy() {

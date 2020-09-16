@@ -66,6 +66,7 @@ data class WeatherData(
     val time: String?
 )
 
+// 蓝牙基本信息，原生和前端交换
 data class BleDeviceData(
     val mac: String?,
     val name: String?,
@@ -97,6 +98,7 @@ data class MarkData(
     val desc: String?
 )
 
+// 设置蓝牙GATT服务时用的，自己的蓝牙信息，不完整
 data class BleInfoData(
     val deviceName: String = "",
     val mac: String = "",
@@ -105,4 +107,9 @@ data class BleInfoData(
 
 data class GATTData(
     val message: String?
+)
+
+data class WinSizeData(
+    val width: Int = 0,
+    val height: Int = 0
 )

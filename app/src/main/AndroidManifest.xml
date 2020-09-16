@@ -34,7 +34,6 @@
     <uses-permission android:name="android.permission.CAMERA" />
 
     <application
-        android:name=".App"
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
@@ -43,33 +42,38 @@
         android:theme="@style/AppTheme"
         android:usesCleartextTraffic="true">
 
+        <!--高德服务-->
         <meta-data
             android:name="com.amap.api.v2.apikey"
             android:value="20d318f31afd8525cf194f33c8f11a80" />
 
         <service android:name="com.amap.api.location.APSService" android:enabled="true" android:process=":remote"/>
 
+        <!--手环服务-->
         <service
-            android:name="com.hicling.clingsdk.bleservice.ClingCommunicatorService"
-            android:enabled="true" />
+            android:name="com.yc.pedometer.sdk.BluetoothLeService"
+            android:enabled="true"/>
+
+        <!--  改成你的key，请联系sdk开发者申请提供 -->
+        <meta-data
+            android:name="YCAPPKEY"
+            android:value="dcd05f241b65ec7b6af0bbe6f05145c2" />
+
+        <!--解决android9.0上使用ProtocolVersion抛异常的bug-->
+        <uses-library
+            android:name="org.apache.http.legacy"
+            android:required="false" />
+
+        <!-- 8762C升级需要 -->
         <service
-            android:name="com.hicling.clingsdk.network.ClingNetWorkService"
-            android:enabled="true" />
-        <service
-            android:name="com.hicling.clingsdk.systembroadcast.ClingSystemBroadcastService"
-            android:enabled="true" />
-        <service
-            android:name=".notification.SysNotificationListenerService"
-            android:label="Demo Notification Service "
-            android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE">
-            <intent-filter>
-                <action android:name="android.service.notification.NotificationListenerService" />
-            </intent-filter>
-        </service>
+            android:name="com.realsil.sdk.dfu.DfuService"
+            android:enabled="true"
+            android:exported="true" />
+
 
         <activity
             android:name="com.linchaolong.android.imagepicker.cropper.CropImageActivity"
-            android:theme="@style/Base.Theme.AppCompat"
+            android:theme="@style/CropperTheme"
             android:screenOrientation="portrait"
             tools:ignore="Instantiatable" />
         <activity
@@ -87,7 +91,7 @@
         <activity
             android:name=".MapActivity"
             android:screenOrientation="portrait"
-            android:theme="@style/TranslucentTheme"></activity>
+            android:theme="@style/TranslucentTheme" />
     </application>
 
 </manifest>
