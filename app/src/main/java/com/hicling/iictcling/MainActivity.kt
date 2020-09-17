@@ -6,6 +6,10 @@
  */
 package com.hicling.iictcling
 
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
 import android.os.Bundle
 import android.os.Handler
 import android.util.Log
@@ -14,10 +18,8 @@ import android.widget.LinearLayout
 import com.google.gson.Gson
 import com.yc.pedometer.info.HeartRateHeadsetSportModeInfo
 import com.yc.pedometer.info.SportsModesInfo
-import com.yc.pedometer.sdk.BLEServiceOperate
-import com.yc.pedometer.sdk.BluetoothLeService
-import com.yc.pedometer.sdk.ICallback
-import com.yc.pedometer.sdk.ICallbackStatus
+import com.yc.pedometer.sdk.*
+import com.yc.pedometer.utils.GlobalVariable
 import wendu.webviewjavascriptbridge.WVJBWebView
 import wendu.webviewjavascriptbridge.WVJBWebView.WVJBHandler
 
@@ -25,6 +27,9 @@ class MainActivity : WebViewActivity() {
     private var splashView: LinearLayout? = null
     private var mBLEServiceOperate: BLEServiceOperate? = null
     private var mBluetoothLeService: BluetoothLeService? = null
+    private var connectStatus: Boolean = false
+    private var connectDevice: BleDeviceData? = null
+    private var mWriteCommand: WriteCommandToBLE? = null
 
     private val content = R.layout.activity_main
     override val tag = this.javaClass.simpleName
@@ -41,15 +46,34 @@ class MainActivity : WebViewActivity() {
         }
     }
 
-    // these bridge functions can only used in this activity, not global and general
-    override fun initBridge(mWebView: WVJBWebView) {
-        super.initBridge(mWebView)
-        Log.i(tag, "MainActivity: initBridge")
+    private fun registerReceiver() {
+        val mFilter = IntentFilter()
+        mFilter.addAction(GlobalVariable.READ_BATTERY_ACTION)
+        mFilter.addAction(GlobalVariable.READ_BLE_VERSION_ACTION)
+        registerReceiver(object : BroadcastReceiver() {
+            override fun onReceive(context: Context, intent: Intent) {
+                val action = intent.action
+                if (action == GlobalVariable.READ_BLE_VERSION_ACTION) {
+                    val version = intent.getStringExtra(GlobalVariable.INTENT_BLE_VERSION_EXTRA)
+                    Log.i(tag, "version: $version")
+                    mWebView?.callHandler("BandOnVersion", json(1, version, "get band version"))
+                } else if ((action == GlobalVariable.READ_BATTERY_ACTION)) {
+                    val battery = intent.getIntExtra(GlobalVariable.INTENT_BLE_BATTERY_EXTRA, -1)
+                    Log.i(tag, "battery: $battery")
+                    mWebView?.callHandler("BandOnBattery", json(1, battery, "get band battery"))
+                }
+            }
+        }, mFilter)
+    }
+
+    private fun registerBLECallback(mWebView: WVJBWebView) {
         // 用于BluetoothLeService实例化准备,必须
         mBLEServiceOperate = BLEServiceOperate.getInstance(applicationContext)
+        mWriteCommand = WriteCommandToBLE.getInstance(applicationContext)
         // 设置扫描后回调，服务开启后回调
         mBLEServiceOperate?.let {
             it.setDeviceScanListener { device, rssi, _ ->
+                Log.i("bandScan", "find device ${device.name}")
                 val returnData = getBleDeviceData(device, rssi)
                 returnData?.let { it2 ->
                     mWebView.callHandler(
@@ -61,8 +85,32 @@ class MainActivity : WebViewActivity() {
             it.setServiceStatusCallback { status ->
                 if (status == ICallbackStatus.BLE_SERVICE_START_OK) {
                     mBluetoothLeService = it.bleService
+
                     it.bleService.setICallback(object : ICallback {
+
+                        override fun OnResult(flag: Boolean, status: Int) {
+                            Log.i("BandConnect", "OnResult $status")
+                            // 连上
+                            if (status == ICallbackStatus.CONNECTED_STATUS) {
+                                Log.i("BandConnect", "flag=$flag, connected")
+                                connectStatus = true
+                                mWebView.callHandler(
+                                    "OnBandDisconnected", json(1, null, "connected")
+                                )
+                            }
+                            // 断开
+                            if (status == ICallbackStatus.DISCONNECT_STATUS) {
+                                Log.i("BandConnect", "flag=$flag, disconnected")
+                                connectStatus = false
+                                connectDevice = null
+                                mWebView.callHandler(
+                                    "OnBandConnected", json(1, null, "disconnected")
+                                )
+                            }
+                        }
+
                         override fun OnDataResult(flag: Boolean, status: Int, data: ByteArray?) {
+                            Log.i("BandConnect", "OnDataResult")
                             if (data != null && data.isNotEmpty()) {
                                 val stringBuilder = StringBuilder(data.size)
                                 for (byteChar in data) {
@@ -101,24 +149,8 @@ class MainActivity : WebViewActivity() {
                             Log.i("BandConnect", "OnResultHeartRateHeadset")
                         }
 
-                        override fun OnResult(flag: Boolean, status: Int) {
-                            Log.i("BandConnect", "OnResult")
-                            if (status == ICallbackStatus.CONNECTED_STATUS) {
-                                Log.i("BandConnect", "flag=$flag, connected")
-                                mWebView.callHandler(
-                                    "OnBandDisconnected", json(1, null, "Finish Scan")
-                                )
-                            }
-                            if (status == ICallbackStatus.DISCONNECT_STATUS) {
-                                Log.i("BandConnect", "flag=$flag, disconnected")
-                                mWebView.callHandler(
-                                    "OnBandConnected", json(1, null, "Finish Scan")
-                                )
-                            }
-                        }
-
                         override fun onCharacteristicWriteCallback(p0: Int) {
-                            Log.i("BandConnect", "onCharacteristicWriteCallback")
+                            Log.i("BandConnect", "onCharacteristicWriteCallback $p0")
                         }
 
                         override fun onIbeaconWriteCallback(
@@ -146,8 +178,16 @@ class MainActivity : WebViewActivity() {
                 }
             }
         }
+    }
+
+    // these bridge functions can only used in this activity, not global and general
+    override fun initBridge(mWebView: WVJBWebView) {
+        super.initBridge(mWebView)
+        Log.i(tag, "MainActivity: initBridge")
 
         // 设置连接后各种手环回调
+        registerBLECallback(mWebView)
+        registerReceiver()
 
         // 扫描手环
         mWebView.registerHandler("scanBand", WVJBHandler<Any?, Any?> { data, function ->
@@ -182,13 +222,32 @@ class MainActivity : WebViewActivity() {
             Log.i(tag, data.toString())
             val data = Gson().fromJson(data.toString(), BleDeviceData::class.java)
             mBLEServiceOperate?.let {
+                // 已经是连接状态，禁止再连接
+                if (connectStatus) return@WVJBHandler function.onResult(
+                    json(0, null, "connected, please disconnect first")
+                )
+                // reset connect status
+                connectDevice = data
+                connectStatus = false
                 it.connect(data.mac)
                 Log.i("BandConnect", "Start to connect")
+                return@WVJBHandler function.onResult(json(1, null, "connecting"))
             }
-            function.onResult(json(1, null, "connect"))
+            return@WVJBHandler function.onResult(json(0, null, "BLEServiceOperate is null"))
         })
 
-        //断开连接
+        // 检查已连接的手环
+        mWebView.registerHandler("checkBand", WVJBHandler<Any?, Any?> { _, function ->
+            Log.i(tag, "js call check band")
+            Log.i(tag, "$connectStatus $connectDevice")
+            if (connectStatus) function.onResult(json(1, connectDevice, "connected"))
+            else {
+                connectDevice = null
+                function.onResult(json(0, null, "unconnected"))
+            }
+        })
+
+        // 断开连接
         mWebView.registerHandler("disConnectBand", WVJBHandler<Any?, Any?> { _, function ->
             Log.i(tag, "js call disconnect band")
             mBLEServiceOperate?.let {
@@ -196,6 +255,43 @@ class MainActivity : WebViewActivity() {
                 Log.i("BandConnect", "Start to disconnect")
             }
             function.onResult(json(1, null, "disconnect"))
+        })
+
+        // 获取手环版本
+        mWebView.registerHandler("bandVersion", WVJBHandler<Any?, Any?> { _, function ->
+            Log.i(tag, "js call band version")
+            if (!connectStatus || connectDevice == null)
+                return@WVJBHandler function.onResult(
+                    json(0, null, "no band connected")
+                )
+            mWriteCommand?.let {
+                it.sendToReadBLEVersion()
+                function.onResult(json(1, null, "broadcast version"))
+            }
+        })
+
+        // 获取手环版本
+        mWebView.registerHandler("bandBattery", WVJBHandler<Any?, Any?> { _, function ->
+            Log.i(tag, "js call band battery")
+            if (!connectStatus || connectDevice == null)
+                return@WVJBHandler function.onResult(
+                    json(0, null, "no band connected")
+                )
+            mWriteCommand?.let {
+                it.sendToReadBLEBattery()
+                function.onResult(json(1, null, "broadcast battery"))
+            }
+        })
+        // 获取手环版本
+        mWebView.registerHandler("bandBattery", WVJBHandler<Any?, Any?> { _, function ->
+            Log.i(tag, "js call band battery")
+            if (!connectStatus || connectDevice == null)
+                return@WVJBHandler function.onResult(
+                    json(0, null, "no band connected")
+                )
+            mWriteCommand?.let {
+                it.readAirPressureTemperatureHistory()
+            }
         })
     }
 
