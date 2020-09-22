@@ -1,4 +1,4 @@
-package com.hicling.iictcling
+package cn.iict.virustrack
 
 import android.os.Bundle
 import android.util.DisplayMetrics

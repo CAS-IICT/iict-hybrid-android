@@ -9,7 +9,7 @@
 * All activities with webview component need to extend this class
 */
 
-package com.hicling.iictcling
+package cn.iict.virustrack
 
 import android.Manifest
 import android.annotation.SuppressLint

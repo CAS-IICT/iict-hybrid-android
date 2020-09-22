@@ -7,7 +7,7 @@
     android:layout_height="match_parent"
     android:orientation="vertical"
     android:visibility="visible"
-    tools:context=".MainActivity">
+    tools:context="cn.iict.virustrack.MainActivity">
 
     <LinearLayout
         android:id="@+id/splash"

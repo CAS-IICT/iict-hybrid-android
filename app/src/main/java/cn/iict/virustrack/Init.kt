@@ -1,4 +1,4 @@
-package com.hicling.iictcling
+package cn.iict.virustrack
 
 import android.app.AlertDialog
 import android.bluetooth.BluetoothAdapter

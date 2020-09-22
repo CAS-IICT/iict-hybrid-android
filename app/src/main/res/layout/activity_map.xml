@@ -5,7 +5,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    tools:context=".MapActivity">
+    tools:context="cn.iict.virustrack.MapActivity">
 
     <wendu.webviewjavascriptbridge.WVJBWebView
         android:id="@+id/webview"

@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
-    package="com.hicling.iictcling">
+    package="cn.iict.virustrack">
 
     <uses-permission android:name="android.permission.BLUETOOTH" />
     <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" />
@@ -25,7 +25,8 @@
     <uses-permission android:name="android.permission.CHANGE_WIFI_STATE" />
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
     <uses-permission android:name="android.permission.ACCESS_LOCATION_EXTRA_COMMANDS" />
-    <uses-permission android:name="android.permission.LOCAL_MAC_ADDRESS"
+    <uses-permission
+        android:name="android.permission.LOCAL_MAC_ADDRESS"
         tools:ignore="ProtectedPermissions" />
 
     <uses-permission
@@ -40,19 +41,23 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/AppTheme"
-        android:usesCleartextTraffic="true">
+        android:usesCleartextTraffic="true"
+        tools:targetApi="m">
 
         <!--高德服务-->
         <meta-data
             android:name="com.amap.api.v2.apikey"
             android:value="20d318f31afd8525cf194f33c8f11a80" />
 
-        <service android:name="com.amap.api.location.APSService" android:enabled="true" android:process=":remote"/>
+        <service
+            android:name="com.amap.api.location.APSService"
+            android:enabled="true"
+            android:process=":remote" />
 
         <!--手环服务-->
         <service
             android:name="com.yc.pedometer.sdk.BluetoothLeService"
-            android:enabled="true"/>
+            android:enabled="true" />
 
         <!--  改成你的key，请联系sdk开发者申请提供 -->
         <meta-data
@@ -67,17 +72,16 @@
         <!-- 8762C升级需要 -->
         <service
             android:name="com.realsil.sdk.dfu.DfuService"
-            android:enabled="true"
-            android:exported="true" />
+            android:enabled="true" />
 
 
         <activity
             android:name="com.linchaolong.android.imagepicker.cropper.CropImageActivity"
-            android:theme="@style/CropperTheme"
             android:screenOrientation="portrait"
+            android:theme="@style/CropperTheme"
             tools:ignore="Instantiatable" />
         <activity
-            android:name=".MainActivity"
+            android:name="cn.iict.virustrack.MainActivity"
             android:screenOrientation="portrait">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -86,10 +90,10 @@
             </intent-filter>
         </activity>
         <activity
-            android:name=".WebViewActivity"
+            android:name="cn.iict.virustrack.WebViewActivity"
             android:screenOrientation="portrait" />
         <activity
-            android:name=".MapActivity"
+            android:name="cn.iict.virustrack.MapActivity"
             android:screenOrientation="portrait"
             android:theme="@style/TranslucentTheme" />
     </application>

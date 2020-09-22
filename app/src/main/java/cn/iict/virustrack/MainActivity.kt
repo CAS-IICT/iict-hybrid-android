@@ -4,7 +4,7 @@
 * 2020-5-20
 * 主activity，其中要包含clingsdk的一些方法，继承自jsActivity，获得父类全部基础的webviewbridge注册方法
  */
-package com.hicling.iictcling
+package cn.iict.virustrack
 
 import android.content.BroadcastReceiver
 import android.content.Context
@@ -18,6 +18,8 @@ import android.widget.LinearLayout
 import com.google.gson.Gson
 import com.yc.pedometer.info.HeartRateHeadsetSportModeInfo
 import com.yc.pedometer.info.SportsModesInfo
+import com.yc.pedometer.info.TemperatureInfo
+import com.yc.pedometer.listener.TemperatureListener
 import com.yc.pedometer.sdk.*
 import com.yc.pedometer.utils.GlobalVariable
 import wendu.webviewjavascriptbridge.WVJBWebView
@@ -46,7 +48,8 @@ class MainActivity : WebViewActivity() {
         }
     }
 
-    private fun registerReceiver() {
+    // 注册接收器，手环版本，电量这些
+    private fun registerReceiver(mWebView: WVJBWebView) {
         val mFilter = IntentFilter()
         mFilter.addAction(GlobalVariable.READ_BATTERY_ACTION)
         mFilter.addAction(GlobalVariable.READ_BLE_VERSION_ACTION)
@@ -56,16 +59,17 @@ class MainActivity : WebViewActivity() {
                 if (action == GlobalVariable.READ_BLE_VERSION_ACTION) {
                     val version = intent.getStringExtra(GlobalVariable.INTENT_BLE_VERSION_EXTRA)
                     Log.i(tag, "version: $version")
-                    mWebView?.callHandler("BandOnVersion", json(1, version, "get band version"))
+                    mWebView.callHandler("BandOnVersion", json(1, version, "get band version"))
                 } else if ((action == GlobalVariable.READ_BATTERY_ACTION)) {
                     val battery = intent.getIntExtra(GlobalVariable.INTENT_BLE_BATTERY_EXTRA, -1)
                     Log.i(tag, "battery: $battery")
-                    mWebView?.callHandler("BandOnBattery", json(1, battery, "get band battery"))
+                    mWebView.callHandler("BandOnBattery", json(1, battery, "get band battery"))
                 }
             }
         }, mFilter)
     }
 
+    // 手环的一系列回调
     private fun registerBLECallback(mWebView: WVJBWebView) {
         // 用于BluetoothLeService实例化准备,必须
         mBLEServiceOperate = BLEServiceOperate.getInstance(applicationContext)
@@ -82,29 +86,72 @@ class MainActivity : WebViewActivity() {
                     )
                 }
             }
+
             it.setServiceStatusCallback { status ->
                 if (status == ICallbackStatus.BLE_SERVICE_START_OK) {
                     mBluetoothLeService = it.bleService
 
+                    // 体温回调
+                    it.bleService.setTemperatureListener(object : TemperatureListener {
+                        override fun onTestResult(p0: TemperatureInfo?) {
+                            p0?.let { temp ->
+                                val data = BandTemperatureData(
+                                    temp.type,
+                                    temp.calendar,
+                                    temp.startDate,
+                                    temp.secondTime,
+                                    temp.bodyTemperature,
+                                    temp.bodySurfaceTemperature,
+                                    temp.ambientTemperature
+                                )
+                                mWebView.callHandler(
+                                    "BandTestTemperature", json(1, data, "getTestTemperature")
+                                )
+                            }
+                        }
+
+                        override fun onSamplingResult(p0: TemperatureInfo?) {
+                            p0?.let { temp ->
+                                val data = BandTemperatureData(
+                                    temp.type,
+                                    temp.calendar,
+                                    temp.startDate,
+                                    temp.secondTime,
+                                    temp.bodyTemperature,
+                                    temp.bodySurfaceTemperature,
+                                    temp.ambientTemperature
+                                )
+                                mWebView.callHandler(
+                                    "BandSampleTemperature", json(1, data, "getSampleTemperature")
+                                )
+                            }
+                        }
+                    })
                     it.bleService.setICallback(object : ICallback {
 
                         override fun OnResult(flag: Boolean, status: Int) {
                             Log.i("BandConnect", "OnResult $status")
                             // 连上
                             if (status == ICallbackStatus.CONNECTED_STATUS) {
-                                Log.i("BandConnect", "flag=$flag, connected")
+                                Log.i(
+                                    "BandConnect",
+                                    "flag=$flag, connected, ${connectDevice?.name}"
+                                )
                                 connectStatus = true
                                 mWebView.callHandler(
-                                    "OnBandDisconnected", json(1, null, "connected")
+                                    "OnBandConnected", json(1, null, "connected")
                                 )
                             }
                             // 断开
                             if (status == ICallbackStatus.DISCONNECT_STATUS) {
-                                Log.i("BandConnect", "flag=$flag, disconnected")
+                                Log.i(
+                                    "BandConnect",
+                                    "flag=$flag, disconnected, ${connectDevice?.name}"
+                                )
                                 connectStatus = false
                                 connectDevice = null
                                 mWebView.callHandler(
-                                    "OnBandConnected", json(1, null, "disconnected")
+                                    "OnBandDisconnected", json(1, null, "disconnected")
                                 )
                             }
                         }
@@ -175,6 +222,7 @@ class MainActivity : WebViewActivity() {
                             Log.i("BandConnect", "onControlDialCallback")
                         }
                     })
+
                 }
             }
         }
@@ -187,7 +235,7 @@ class MainActivity : WebViewActivity() {
 
         // 设置连接后各种手环回调
         registerBLECallback(mWebView)
-        registerReceiver()
+        registerReceiver(mWebView)
 
         // 扫描手环
         mWebView.registerHandler("scanBand", WVJBHandler<Any?, Any?> { data, function ->
@@ -270,7 +318,7 @@ class MainActivity : WebViewActivity() {
             }
         })
 
-        // 获取手环版本
+        // 获取手环电量
         mWebView.registerHandler("bandBattery", WVJBHandler<Any?, Any?> { _, function ->
             Log.i(tag, "js call band battery")
             if (!connectStatus || connectDevice == null)
@@ -282,15 +330,16 @@ class MainActivity : WebViewActivity() {
                 function.onResult(json(1, null, "broadcast battery"))
             }
         })
-        // 获取手环版本
-        mWebView.registerHandler("bandBattery", WVJBHandler<Any?, Any?> { _, function ->
-            Log.i(tag, "js call band battery")
+        // 获取体温
+        mWebView.registerHandler("bodyTemperature", WVJBHandler<Any?, Any?> { _, function ->
+            Log.i(tag, "js call band body temperature")
             if (!connectStatus || connectDevice == null)
                 return@WVJBHandler function.onResult(
                     json(0, null, "no band connected")
                 )
             mWriteCommand?.let {
-                it.readAirPressureTemperatureHistory()
+                it.queryCurrentTemperatureData()
+                function.onResult(json(1, null, "test temperature"))
             }
         })
     }

@@ -1,6 +1,5 @@
-package com.hicling.iictcling
+package cn.iict.virustrack
 
-import android.os.ParcelUuid
 import java.util.*
 import kotlin.collections.ArrayList
 import kotlin.collections.HashMap
@@ -16,8 +15,6 @@ data class AlertData(val title: String?, val message: String?, val btnConfirm: S
 data class LoadingData(val load: Boolean = false)
 data class StatusBarData(val background: String?, val color: String?)
 data class WebViewData(val url: String?, val loading: Boolean = false)
-data class SignInData(val username: String?, val password: String?)
-data class SignUpData(val username: String?, val password: String?, val rePassword: String?)
 data class ResData(val status: Int?, val data: Any?, val msg: String?)
 data class TimeData(val time: Long = 10000)
 data class Mac(val bluetooth: String = "", val wifi: String = "")
@@ -112,4 +109,14 @@ data class GATTData(
 data class WinSizeData(
     val width: Int = 0,
     val height: Int = 0
+)
+
+data class BandTemperatureData(
+    val type: Int,
+    val calendar: String,
+    val startDate: String,
+    val secondTime: Int,
+    val bodyTemperature: Float,
+    val bodySurfaceTemperature: Float,
+    val ambientTemperature: Float
 )
