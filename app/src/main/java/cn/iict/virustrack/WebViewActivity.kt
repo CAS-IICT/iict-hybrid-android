@@ -428,7 +428,8 @@ open class WebViewActivity : Activity() {
             Toast.makeText(applicationContext, R.string.exit, Toast.LENGTH_SHORT).show()
             handler.postDelayed({ isExit-- }, 2000L)
         } else {
-            this.finish()
+            // 连续按两次切回后台
+            moveTaskToBack(true)
         }
     }
 

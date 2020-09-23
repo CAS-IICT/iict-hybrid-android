@@ -120,3 +120,15 @@ data class BandTemperatureData(
     val bodySurfaceTemperature: Float,
     val ambientTemperature: Float
 )
+data class BandStepData(
+    val step:Int,
+    val distance:Float,
+    val calories:Float,
+    val runSteps:Int,
+    val runDistance: Float,
+    val runDurationTime: Int,
+    val walkSteps:Int,
+    val walkCalories: Float,
+    val walkDistance: Float,
+    val walkDurationTime: Int
+)
