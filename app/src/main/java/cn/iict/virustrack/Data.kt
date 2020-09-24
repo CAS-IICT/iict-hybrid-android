@@ -111,6 +111,7 @@ data class WinSizeData(
     val height: Int = 0
 )
 
+//体温
 data class BandTemperatureData(
     val type: Int,
     val calendar: String,
@@ -120,15 +121,34 @@ data class BandTemperatureData(
     val bodySurfaceTemperature: Float,
     val ambientTemperature: Float
 )
+
+// 计步
 data class BandStepData(
-    val step:Int,
-    val distance:Float,
-    val calories:Float,
-    val runSteps:Int,
+    val step: Int,
+    val distance: Float,
+    val calories: Float,
+    val runSteps: Int,
     val runDistance: Float,
     val runDurationTime: Int,
-    val walkSteps:Int,
+    val walkSteps: Int,
     val walkCalories: Float,
     val walkDistance: Float,
     val walkDurationTime: Int
+)
+
+// 心率
+data class BandRateData(
+    val rate: Int,
+    val status: Int
+)
+// 血压
+data class BloodPressureData(
+    val p0: Int,
+    val p1: Int,
+    val p2: Int
+)
+
+// 开关类，只有一个参数，只有true或者false
+data class SwitchData(
+    val flag: Boolean?
 )

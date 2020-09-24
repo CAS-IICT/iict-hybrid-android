@@ -178,6 +178,29 @@ class MainActivity : WebViewActivity() {
                                     "OnBandStepSync", json(1, null, "step sync successfully")
                                 )
                             }
+                            // 计步同步
+                            if (status == ICallbackStatus.OFFLINE_SLEEP_SYNC_OK) {
+                                Log.i(
+                                    "BandConnect",
+                                    "flag=$flag, sync sleep success, ${connectDevice?.name}"
+                                )
+                                mWebView.callHandler(
+                                    "OnBandSleepSync", json(1, null, "sleep sync successfully")
+                                )
+                            }
+                            // 心率同步
+                            if (status == ICallbackStatus.OFFLINE_RATE_SYNC_OK) {
+                                mWebView.callHandler(
+                                    "OnBandRateSync", json(1, null, "rate sync successfully")
+                                )
+                            }
+                            // 血压同步
+                            if (status == ICallbackStatus.OFFLINE_BLOOD_PRESSURE_SYNC_OK) {
+                                mWebView.callHandler(
+                                    "OnBandBloodPressureSync",
+                                    json(1, null, "blood pressure sync successfully")
+                                )
+                            }
                         }
 
                         override fun OnDataResult(flag: Boolean, status: Int, data: ByteArray?) {
@@ -269,8 +292,22 @@ class MainActivity : WebViewActivity() {
                         it.walkDurationTime
                     )
                     Log.i("BandConnect", data.toString())
-                    mWebView.callHandler("OnBandStepChange", json(1, data, "Step data"))
+                    mWebView.callHandler("OnBandStepChange", json(1, data, "Step data changed"))
                 }
+            }
+            p.setOnSleepChangeListener {
+                mWebView.callHandler("OnBandSleepChange", json(1, null, "Sleep data changed"))
+            }
+            p.setOnRateListener { p0, p1 ->
+                val data = BandRateData(p0, p1)
+                mWebView.callHandler("OnBandRateChange", json(1, data, "Rate data changed"))
+            }
+            p.setOnBloodPressureListener { p0, p1, p2 ->
+                val data = BloodPressureData(p0, p1, p2)
+                mWebView.callHandler(
+                    "OnBandBloodPressureChange",
+                    json(1, data, "Blood pressure data changed")
+                )
             }
         }
     }
@@ -405,16 +442,6 @@ class MainActivity : WebViewActivity() {
             }
         })
 
-        // 获取一天计步
-        mWebView.registerHandler("getOneStep", WVJBHandler<Any?, Any?> { _, function ->
-            Log.i(tag, "js call get one step")
-            if (!connectStatus || connectDevice == null)
-                return@WVJBHandler function.onResult(json(0, null, "no band connected"))
-            mWriteCommand?.let {
-                function.onResult(json(1, null, "sync step data"))
-            }
-        })
-
         // 同步睡眠
         mWebView.registerHandler("syncSleep", WVJBHandler<Any?, Any?> { _, function ->
             Log.i(tag, "js call sync sleep")
@@ -423,6 +450,76 @@ class MainActivity : WebViewActivity() {
             mWriteCommand?.let {
                 it.syncAllSleepData()
                 function.onResult(json(1, null, "sync sleep data"))
+            }
+        })
+
+        // 同步心率
+        mWebView.registerHandler("syncRate", WVJBHandler<Any?, Any?> { _, function ->
+            Log.i(tag, "js call sync rate")
+            if (!connectStatus || connectDevice == null)
+                return@WVJBHandler function.onResult(json(0, null, "no band connected"))
+            mWriteCommand?.let {
+                it.syncAllRateData()
+                function.onResult(json(1, null, "sync rate data"))
+            }
+        })
+
+        // 心率测试开关
+        mWebView.registerHandler("testRate", WVJBHandler<Any?, Any?> { data, function ->
+            Log.i(tag, "js call test rate")
+            Log.i(tag, data.toString())
+            val data = Gson().fromJson(data.toString(), SwitchData::class.java)
+            if (!connectStatus || connectDevice == null)
+                return@WVJBHandler function.onResult(json(0, null, "no band connected"))
+            mWriteCommand?.let {
+                if (data.flag!!) it.sendRateTestCommand(GlobalVariable.RATE_TEST_START)
+                else it.sendRateTestCommand(GlobalVariable.RATE_TEST_STOP)
+                function.onResult(json(1, null, "test rate data ${data.flag}"))
+            }
+        })
+
+        // 同步血压
+        mWebView.registerHandler("syncBloodPressure", WVJBHandler<Any?, Any?> { _, function ->
+            Log.i(tag, "js call sync blood pressure")
+            if (!connectStatus || connectDevice == null)
+                return@WVJBHandler function.onResult(json(0, null, "no band connected"))
+            mWriteCommand?.let {
+                it.syncAllBloodPressureData()
+                function.onResult(json(1, null, "sync blood pressure"))
+            }
+        })
+
+        // 测试血压
+        mWebView.registerHandler("testBloodPressure", WVJBHandler<Any?, Any?> { data, function ->
+            Log.i(tag, "js call test blood pressure")
+            Log.i(tag, data.toString())
+            val data = Gson().fromJson(data.toString(), SwitchData::class.java)
+            if (!connectStatus || connectDevice == null)
+                return@WVJBHandler function.onResult(json(0, null, "no band connected"))
+            mWriteCommand?.let {
+                if (data.flag!!) it.sendBloodPressureTestCommand(GlobalVariable.BLOOD_PRESSURE_TEST_START)
+                else it.sendBloodPressureTestCommand(GlobalVariable.BLOOD_PRESSURE_TEST_STOP)
+                function.onResult(json(1, null, "test blood pressure ${data.flag}"))
+            }
+        })
+
+        // 检查采集体温开关
+        mWebView.registerHandler("temperatureStatus", WVJBHandler<Any?, Any?> { data, function ->
+            Log.i(tag, "js call set/get temp status")
+            Log.i(tag, data.toString())
+            val data = Gson().fromJson(data.toString(), SwitchData::class.java)
+            if (!connectStatus || connectDevice == null)
+                return@WVJBHandler function.onResult(json(0, null, "no band connected"))
+            mWriteCommand?.let {
+                if (data.flag == null) { //null时查询
+                    Log.i(tag, "get temp status")
+                    it.queryRawTemperatureStatus()
+                    function.onResult(json(1, null, "query raw temperature status"))
+                } else {
+                    Log.i(tag, "set temp status")
+                    it.setRawTemperatureStatus(data.flag)
+                    function.onResult(json(1, null, "set raw temperature status, ${data.flag}"))
+                }
             }
         })
     }
