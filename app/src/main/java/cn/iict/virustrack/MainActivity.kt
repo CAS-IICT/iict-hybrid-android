@@ -62,6 +62,7 @@ class MainActivity : WebViewActivity() {
         mFilter.addAction(GlobalVariable.READ_BLE_VERSION_ACTION)
         registerReceiver(object : BroadcastReceiver() {
             override fun onReceive(context: Context, intent: Intent) {
+                mWebView.callHandler("BandUnlock")
                 val action = intent.action
                 if (action == GlobalVariable.READ_BLE_VERSION_ACTION) {
                     val version = intent.getStringExtra(GlobalVariable.INTENT_BLE_VERSION_EXTRA)
@@ -83,7 +84,7 @@ class MainActivity : WebViewActivity() {
                 val returnData = getBleDeviceData(device, rssi)
                 returnData?.let { it2 ->
                     mWebView.callHandler(
-                        "BandOnScanResult",
+                        "OnBandScanResult",
                         json(1, it2, "Scan Band device: ${device.name}")
                     )
                 }
@@ -96,6 +97,7 @@ class MainActivity : WebViewActivity() {
                     // 体温回调
                     it.bleService.setTemperatureListener(object : TemperatureListener {
                         override fun onTestResult(p0: TemperatureInfo?) {
+                            mWebView.callHandler("BandUnlock")
                             p0?.let { temp ->
                                 val data = BandTemperatureData(
                                     temp.type,
@@ -113,6 +115,7 @@ class MainActivity : WebViewActivity() {
                         }
 
                         override fun onSamplingResult(p0: TemperatureInfo?) {
+                            mWebView.callHandler("BandUnlock")
                             p0?.let { temp ->
                                 val data = BandTemperatureData(
                                     temp.type,
@@ -131,23 +134,25 @@ class MainActivity : WebViewActivity() {
                     })
                     // icallback
                     it.bleService.setICallback(object : ICallback {
-
                         override fun OnResult(flag: Boolean, status: Int) {
-                            Log.i("BandConnect", "OnResult $status")
-                            // 连上
+                            Log.i("OnResult", "$flag $status")
                             if (status == ICallbackStatus.CONNECTED_STATUS) {
-                                Log.i(
-                                    "BandConnect",
-                                    "flag=$flag, connected, ${connectDevice?.name}"
-                                )
+                                mWebView.callHandler("BandUnlock")
                                 connectStatus = true
                                 // 连接成功返回手环信息
                                 mWebView.callHandler(
-                                    "OnBandConnected", json(1, connectDevice, "connected")
+                                    "OnBandConnected",
+                                    json(1, connectDevice, "connected")
                                 )
+                            }
+                            // connect timeout
+                            if (status == ICallbackStatus.BLE_CONNECT_TIMEOUT) {
+                                mWebView.callHandler("BandUnlock")
+                                connectStatus = false
                             }
                             // 断开
                             if (status == ICallbackStatus.DISCONNECT_STATUS) {
+                                mWebView.callHandler("BandUnlock")
                                 Log.i(
                                     "BandConnect",
                                     "flag=$flag, disconnected, ${connectDevice?.name}"
@@ -155,51 +160,58 @@ class MainActivity : WebViewActivity() {
                                 connectStatus = false
                                 connectDevice = null
                                 mWebView.callHandler(
-                                    "OnBandDisconnected", json(1, null, "disconnected")
+                                    "OnBandDisconnected",
+                                    json(1, null, "disconnected")
                                 )
                             }
                             // 时间同步
                             if (status == ICallbackStatus.SYNC_TIME_OK) {
-                                Log.i(
-                                    "BandConnect",
-                                    "flag=$flag, sync time success, ${connectDevice?.name}"
-                                )
+                                mWebView.callHandler("BandUnlock")
                                 mWebView.callHandler(
                                     "OnBandTimeSync", json(1, null, "time sync successfully")
                                 )
                             }
                             // 计步同步
                             if (status == ICallbackStatus.OFFLINE_STEP_SYNC_OK) {
-                                Log.i(
-                                    "BandConnect",
-                                    "flag=$flag, sync step success, ${connectDevice?.name}"
-                                )
+                                mWebView.callHandler("BandUnlock")
                                 mWebView.callHandler(
-                                    "OnBandStepSync", json(1, null, "step sync successfully")
+                                    "OnBandStepSync",
+                                    json(1, null, "step sync successfully")
                                 )
+                            }
+                            if (status == ICallbackStatus.OFFLINE_STEP_SYNC_TIMEOUT) {
+                                mWebView.callHandler("BandUnlock")
                             }
                             // 计步同步
                             if (status == ICallbackStatus.OFFLINE_SLEEP_SYNC_OK) {
-                                Log.i(
-                                    "BandConnect",
-                                    "flag=$flag, sync sleep success, ${connectDevice?.name}"
-                                )
+                                mWebView.callHandler("BandUnlock")
                                 mWebView.callHandler(
                                     "OnBandSleepSync", json(1, null, "sleep sync successfully")
                                 )
                             }
+                            if (status == ICallbackStatus.OFFLINE_SLEEP_SYNC_TIMEOUT) {
+                                mWebView.callHandler("BandUnlock")
+                            }
                             // 心率同步
                             if (status == ICallbackStatus.OFFLINE_RATE_SYNC_OK) {
+                                mWebView.callHandler("BandUnlock")
                                 mWebView.callHandler(
                                     "OnBandRateSync", json(1, null, "rate sync successfully")
                                 )
                             }
+                            if (status == ICallbackStatus.OFFLINE_RATE_SYNC_TIMEOUT) {
+                                mWebView.callHandler("BandUnlock")
+                            }
                             // 血压同步
                             if (status == ICallbackStatus.OFFLINE_BLOOD_PRESSURE_SYNC_OK) {
+                                mWebView.callHandler("BandUnlock")
                                 mWebView.callHandler(
                                     "OnBandBloodPressureSync",
                                     json(1, null, "blood pressure sync successfully")
                                 )
+                            }
+                            if (status == ICallbackStatus.OFFLINE_BLOOD_PRESSURE_SYNC_TIMEOUT) {
+                                mWebView.callHandler("BandUnlock")
                             }
                         }
 
@@ -278,6 +290,7 @@ class MainActivity : WebViewActivity() {
         mDataProcessing?.let { p ->
             // 计步
             p.setOnStepChangeListener { s ->
+                mWebView.callHandler("BandUnlock")
                 s?.let { it ->
                     val data = BandStepData(
                         it.step,
@@ -296,13 +309,16 @@ class MainActivity : WebViewActivity() {
                 }
             }
             p.setOnSleepChangeListener {
+                mWebView.callHandler("BandUnlock")
                 mWebView.callHandler("OnBandSleepChange", json(1, null, "Sleep data changed"))
             }
             p.setOnRateListener { p0, p1 ->
+                mWebView.callHandler("BandUnlock")
                 val data = BandRateData(p0, p1)
                 mWebView.callHandler("OnBandRateChange", json(1, data, "Rate data changed"))
             }
             p.setOnBloodPressureListener { p0, p1, p2 ->
+                mWebView.callHandler("BandUnlock")
                 val data = BloodPressureData(p0, p1, p2)
                 mWebView.callHandler(
                     "OnBandBloodPressureChange",
@@ -335,9 +351,7 @@ class MainActivity : WebViewActivity() {
                     handler.postDelayed({
                         Log.i(tag, "stop scan band")
                         it.stopLeScan()
-                        mWebView.callHandler(
-                            "BandFinishScan", json(1, null, "Finish Scan")
-                        )
+                        mWebView.callHandler("OnBandScanFinish", json(1, null, "Finish Scan"))
                     }, data.time)
 
                     function.onResult(json(1, null, "start scan the bands"))
@@ -353,16 +367,18 @@ class MainActivity : WebViewActivity() {
             Log.i(tag, data.toString())
             val data = Gson().fromJson(data.toString(), BleDeviceData::class.java)
             mBLEServiceOperate?.let {
+                mWebView.callHandler("BandLock")
                 // 已经是连接状态，禁止再连接
-                if (connectStatus) return@WVJBHandler function.onResult(
-                    json(0, null, "Already connected, please disconnect first")
-                )
-                // reset connect status
-                connectDevice = data
-                connectStatus = false
-                it.connect(data.mac)
-                Log.i("BandConnect", "Start to connect")
-                return@WVJBHandler function.onResult(json(1, null, "connecting"))
+                if (connectStatus && connectDevice != null) {
+                    mWebView.callHandler("BandUnlock")
+                    function.onResult(json(0, null, "Already connected,disconnect first"))
+                } else {
+                    // reset connect status
+                    connectDevice = data
+                    connectStatus = false
+                    it.connect(data.mac)
+                    function.onResult(json(1, null, "connecting"))
+                }
             }
             return@WVJBHandler function.onResult(json(0, null, "BLEServiceOperate is null"))
         })
@@ -371,7 +387,8 @@ class MainActivity : WebViewActivity() {
         mWebView.registerHandler("checkBand", WVJBHandler<Any?, Any?> { _, function ->
             Log.i(tag, "js call check band")
             Log.i(tag, "$connectStatus $connectDevice")
-            if (connectStatus) function.onResult(json(1, connectDevice, "connected"))
+            if (connectStatus && connectDevice != null)
+                function.onResult(json(1, connectDevice, "connected"))
             else {
                 connectDevice = null
                 function.onResult(json(0, null, "unconnected"))
@@ -382,6 +399,7 @@ class MainActivity : WebViewActivity() {
         mWebView.registerHandler("disConnectBand", WVJBHandler<Any?, Any?> { _, function ->
             Log.i(tag, "js call disconnect band")
             mBLEServiceOperate?.let {
+                mWebView.callHandler("BandLock")
                 it.disConnect()
                 Log.i("BandConnect", "Start to disconnect")
                 function.onResult(json(1, null, "disconnect"))
@@ -392,6 +410,7 @@ class MainActivity : WebViewActivity() {
             if (!connectStatus || connectDevice == null)
                 return@WVJBHandler function.onResult(json(0, null, "no band connected"))
             mWriteCommand?.let {
+                mWebView.callHandler("BandLock")
                 it.syncBLETime()
                 Log.i("BandConnect", "sync time")
                 function.onResult(json(1, null, "sync time"))
@@ -404,6 +423,7 @@ class MainActivity : WebViewActivity() {
             if (!connectStatus || connectDevice == null)
                 return@WVJBHandler function.onResult(json(0, null, "no band connected"))
             mWriteCommand?.let {
+                mWebView.callHandler("BandLock")
                 it.sendToReadBLEVersion()
                 function.onResult(json(1, null, "broadcast version"))
             }
@@ -415,6 +435,7 @@ class MainActivity : WebViewActivity() {
             if (!connectStatus || connectDevice == null)
                 return@WVJBHandler function.onResult(json(0, null, "no band connected"))
             mWriteCommand?.let {
+                mWebView.callHandler("BandLock")
                 it.sendToReadBLEBattery()
                 function.onResult(json(1, null, "broadcast battery"))
             }
@@ -426,6 +447,7 @@ class MainActivity : WebViewActivity() {
             if (!connectStatus || connectDevice == null)
                 return@WVJBHandler function.onResult(json(0, null, "no band connected"))
             mWriteCommand?.let {
+                mWebView.callHandler("BandLock")
                 it.queryCurrentTemperatureData()
                 function.onResult(json(1, null, "test temperature"))
             }
@@ -437,6 +459,7 @@ class MainActivity : WebViewActivity() {
             if (!connectStatus || connectDevice == null)
                 return@WVJBHandler function.onResult(json(0, null, "no band connected"))
             mWriteCommand?.let {
+                mWebView.callHandler("BandLock")
                 it.syncAllStepData()
                 function.onResult(json(1, null, "sync step data"))
             }
@@ -448,6 +471,7 @@ class MainActivity : WebViewActivity() {
             if (!connectStatus || connectDevice == null)
                 return@WVJBHandler function.onResult(json(0, null, "no band connected"))
             mWriteCommand?.let {
+                mWebView.callHandler("BandLock")
                 it.syncAllSleepData()
                 function.onResult(json(1, null, "sync sleep data"))
             }
@@ -459,6 +483,7 @@ class MainActivity : WebViewActivity() {
             if (!connectStatus || connectDevice == null)
                 return@WVJBHandler function.onResult(json(0, null, "no band connected"))
             mWriteCommand?.let {
+                mWebView.callHandler("BandLock")
                 it.syncAllRateData()
                 function.onResult(json(1, null, "sync rate data"))
             }
@@ -472,6 +497,7 @@ class MainActivity : WebViewActivity() {
             if (!connectStatus || connectDevice == null)
                 return@WVJBHandler function.onResult(json(0, null, "no band connected"))
             mWriteCommand?.let {
+                mWebView.callHandler("BandLock")
                 if (data.flag!!) it.sendRateTestCommand(GlobalVariable.RATE_TEST_START)
                 else it.sendRateTestCommand(GlobalVariable.RATE_TEST_STOP)
                 function.onResult(json(1, null, "test rate data ${data.flag}"))
