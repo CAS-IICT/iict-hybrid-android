@@ -35,7 +35,7 @@ class Init {
 
     open fun initBridge(mWebView: WVJBWebView, activity: WebViewActivity) {
         Log.i(tag, "WebViewActivity: initBridge")
-        // back
+        // bacn
         mWebView.registerHandler("back", WVJBWebView.WVJBHandler<Any?, Any?> { _, function ->
             Log.i(tag, "js call back")
             if (mWebView.canGoBack()) {
@@ -209,8 +209,6 @@ class Init {
             Log.i(tag, data.toString())
             val data = Gson().fromJson(data.toString(), ScanBleData::class.java)
             if (activity.checkBle()) {
-
-
                 if (data.lowPower && Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
                     // 低功耗蓝牙的扫描回调
                     val scanLowCallback = object : ScanCallback() {

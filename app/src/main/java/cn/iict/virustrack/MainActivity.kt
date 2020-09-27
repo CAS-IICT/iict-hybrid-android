@@ -148,6 +148,10 @@ class MainActivity : WebViewActivity() {
                             // connect timeout
                             if (status == ICallbackStatus.BLE_CONNECT_TIMEOUT) {
                                 mWebView.callHandler("BandUnlock")
+                                mWebView.callHandler(
+                                    "OnBandConnectTimeout",
+                                    json(0, connectDevice, "connect device timeout")
+                                )
                                 connectStatus = false
                             }
                             // 断开
@@ -341,23 +345,24 @@ class MainActivity : WebViewActivity() {
             Log.i(tag, "js call scan band")
             Log.i(tag, data.toString())
             val data = Gson().fromJson(data.toString(), ScanBleData::class.java)
-
+            if (!checkBle()) return@WVJBHandler function.onResult(
+                json(0, null, "ble device is off")
+            )
             mBLEServiceOperate?.let {
-                if (it.isSupportBle4_0 && it.isBleEnabled) {
-                    Log.i(tag, "start scan band")
-                    it.stopLeScan() //先关闭原来的扫描，不重复扫描
-                    it.startLeScan()
-                    // 定时关闭蓝牙扫描
-                    handler.postDelayed({
-                        Log.i(tag, "stop scan band")
-                        it.stopLeScan()
-                        mWebView.callHandler("OnBandScanFinish", json(1, null, "Finish Scan"))
-                    }, data.time)
+                if (!it.isSupportBle4_0) return@WVJBHandler function.onResult(
+                    json(0, null, "ble 4.0 is not support")
+                )
+                Log.i(tag, "start scan band")
+                it.stopLeScan() //先关闭原来的扫描，不重复扫描
+                it.startLeScan()
+                // 定时关闭蓝牙扫描
+                handler.postDelayed({
+                    Log.i(tag, "stop scan band")
+                    it.stopLeScan()
+                    mWebView.callHandler("OnBandScanFinish", json(1, null, "Finish Scan"))
+                }, data.time)
 
-                    function.onResult(json(1, null, "start scan the bands"))
-                } else {
-                    function.onResult(json(0, null, "device not support ble 4.0"))
-                }
+                function.onResult(json(1, null, "start scan the bands"))
             }
         })
 
@@ -366,12 +371,15 @@ class MainActivity : WebViewActivity() {
             Log.i(tag, "js call connect band")
             Log.i(tag, data.toString())
             val data = Gson().fromJson(data.toString(), BleDeviceData::class.java)
+            if (!checkBle()) return@WVJBHandler function.onResult(
+                json(0, null, "ble device is off")
+            )
             mBLEServiceOperate?.let {
                 mWebView.callHandler("BandLock")
                 // 已经是连接状态，禁止再连接
                 if (connectStatus && connectDevice != null) {
                     mWebView.callHandler("BandUnlock")
-                    function.onResult(json(0, null, "Already connected,disconnect first"))
+                    function.onResult(json(0, null, "Already connected, disconnect first"))
                 } else {
                     // reset connect status
                     connectDevice = data
@@ -380,13 +388,15 @@ class MainActivity : WebViewActivity() {
                     function.onResult(json(1, null, "connecting"))
                 }
             }
-            return@WVJBHandler function.onResult(json(0, null, "BLEServiceOperate is null"))
         })
 
         // 检查已连接的手环
         mWebView.registerHandler("checkBand", WVJBHandler<Any?, Any?> { _, function ->
             Log.i(tag, "js call check band")
             Log.i(tag, "$connectStatus $connectDevice")
+            if (!checkBle()) return@WVJBHandler function.onResult(
+                json(0, null, "ble device is off")
+            )
             if (connectStatus && connectDevice != null)
                 function.onResult(json(1, connectDevice, "connected"))
             else {
@@ -398,6 +408,9 @@ class MainActivity : WebViewActivity() {
         // 断开连接
         mWebView.registerHandler("disConnectBand", WVJBHandler<Any?, Any?> { _, function ->
             Log.i(tag, "js call disconnect band")
+            if (!checkBle()) return@WVJBHandler function.onResult(
+                json(0, null, "ble device is off")
+            )
             mBLEServiceOperate?.let {
                 mWebView.callHandler("BandLock")
                 it.disConnect()
@@ -407,6 +420,9 @@ class MainActivity : WebViewActivity() {
         })
         mWebView.registerHandler("syncBandTime", WVJBHandler<Any?, Any?> { _, function ->
             Log.i(tag, "js call sync band time")
+            if (!checkBle()) return@WVJBHandler function.onResult(
+                json(0, null, "ble device is off")
+            )
             if (!connectStatus || connectDevice == null)
                 return@WVJBHandler function.onResult(json(0, null, "no band connected"))
             mWriteCommand?.let {
@@ -420,6 +436,9 @@ class MainActivity : WebViewActivity() {
         // 获取手环版本
         mWebView.registerHandler("bandVersion", WVJBHandler<Any?, Any?> { _, function ->
             Log.i(tag, "js call band version")
+            if (!checkBle()) return@WVJBHandler function.onResult(
+                json(0, null, "ble device is off")
+            )
             if (!connectStatus || connectDevice == null)
                 return@WVJBHandler function.onResult(json(0, null, "no band connected"))
             mWriteCommand?.let {
@@ -432,6 +451,9 @@ class MainActivity : WebViewActivity() {
         // 获取手环电量
         mWebView.registerHandler("bandBattery", WVJBHandler<Any?, Any?> { _, function ->
             Log.i(tag, "js call band battery")
+            if (!checkBle()) return@WVJBHandler function.onResult(
+                json(0, null, "ble device is off")
+            )
             if (!connectStatus || connectDevice == null)
                 return@WVJBHandler function.onResult(json(0, null, "no band connected"))
             mWriteCommand?.let {
@@ -444,6 +466,9 @@ class MainActivity : WebViewActivity() {
         // 获取体温
         mWebView.registerHandler("bodyTemperature", WVJBHandler<Any?, Any?> { _, function ->
             Log.i(tag, "js call band body temperature")
+            if (!checkBle()) return@WVJBHandler function.onResult(
+                json(0, null, "ble device is off")
+            )
             if (!connectStatus || connectDevice == null)
                 return@WVJBHandler function.onResult(json(0, null, "no band connected"))
             mWriteCommand?.let {
@@ -456,6 +481,9 @@ class MainActivity : WebViewActivity() {
         // 同步计步
         mWebView.registerHandler("syncStep", WVJBHandler<Any?, Any?> { _, function ->
             Log.i(tag, "js call sync step")
+            if (!checkBle()) return@WVJBHandler function.onResult(
+                json(0, null, "ble device is off")
+            )
             if (!connectStatus || connectDevice == null)
                 return@WVJBHandler function.onResult(json(0, null, "no band connected"))
             mWriteCommand?.let {
@@ -468,6 +496,9 @@ class MainActivity : WebViewActivity() {
         // 同步睡眠
         mWebView.registerHandler("syncSleep", WVJBHandler<Any?, Any?> { _, function ->
             Log.i(tag, "js call sync sleep")
+            if (!checkBle()) return@WVJBHandler function.onResult(
+                json(0, null, "ble device is off")
+            )
             if (!connectStatus || connectDevice == null)
                 return@WVJBHandler function.onResult(json(0, null, "no band connected"))
             mWriteCommand?.let {
@@ -480,6 +511,9 @@ class MainActivity : WebViewActivity() {
         // 同步心率
         mWebView.registerHandler("syncRate", WVJBHandler<Any?, Any?> { _, function ->
             Log.i(tag, "js call sync rate")
+            if (!checkBle()) return@WVJBHandler function.onResult(
+                json(0, null, "ble device is off")
+            )
             if (!connectStatus || connectDevice == null)
                 return@WVJBHandler function.onResult(json(0, null, "no band connected"))
             mWriteCommand?.let {
@@ -492,6 +526,9 @@ class MainActivity : WebViewActivity() {
         // 心率测试开关
         mWebView.registerHandler("testRate", WVJBHandler<Any?, Any?> { data, function ->
             Log.i(tag, "js call test rate")
+            if (!checkBle()) return@WVJBHandler function.onResult(
+                json(0, null, "ble device is off")
+            )
             Log.i(tag, data.toString())
             val data = Gson().fromJson(data.toString(), SwitchData::class.java)
             if (!connectStatus || connectDevice == null)
@@ -507,6 +544,9 @@ class MainActivity : WebViewActivity() {
         // 同步血压
         mWebView.registerHandler("syncBloodPressure", WVJBHandler<Any?, Any?> { _, function ->
             Log.i(tag, "js call sync blood pressure")
+            if (!checkBle()) return@WVJBHandler function.onResult(
+                json(0, null, "ble device is off")
+            )
             if (!connectStatus || connectDevice == null)
                 return@WVJBHandler function.onResult(json(0, null, "no band connected"))
             mWriteCommand?.let {
@@ -518,6 +558,9 @@ class MainActivity : WebViewActivity() {
         // 测试血压
         mWebView.registerHandler("testBloodPressure", WVJBHandler<Any?, Any?> { data, function ->
             Log.i(tag, "js call test blood pressure")
+            if (!checkBle()) return@WVJBHandler function.onResult(
+                json(0, null, "ble device is off")
+            )
             Log.i(tag, data.toString())
             val data = Gson().fromJson(data.toString(), SwitchData::class.java)
             if (!connectStatus || connectDevice == null)
@@ -532,6 +575,9 @@ class MainActivity : WebViewActivity() {
         // 检查采集体温开关
         mWebView.registerHandler("temperatureStatus", WVJBHandler<Any?, Any?> { data, function ->
             Log.i(tag, "js call set/get temp status")
+            if (!checkBle()) return@WVJBHandler function.onResult(
+                json(0, null, "ble device is off")
+            )
             Log.i(tag, data.toString())
             val data = Gson().fromJson(data.toString(), SwitchData::class.java)
             if (!connectStatus || connectDevice == null)
