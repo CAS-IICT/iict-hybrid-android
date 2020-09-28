@@ -52,8 +52,8 @@ import kotlin.collections.HashMap
 
 open class WebViewActivity : Activity() {
 
-    //open var url = "http://192.168.1.79:8080"
-    open var url = "http://192.168.1.210:8080" //前端
+    open var url = "http://192.168.1.79:8080"
+    //open var url = "http://192.168.1.210:8080" //前端
 
     open val tag: String = this.javaClass.simpleName
     private var loading: Boolean = false

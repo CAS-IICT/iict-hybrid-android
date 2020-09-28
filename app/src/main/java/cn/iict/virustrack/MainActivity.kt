@@ -141,8 +141,7 @@ class MainActivity : WebViewActivity() {
                                 connectStatus = true
                                 // 连接成功返回手环信息
                                 mWebView.callHandler(
-                                    "OnBandConnected",
-                                    json(1, connectDevice, "connected")
+                                    "OnBandConnected", json(1, connectDevice, "connected")
                                 )
                             }
                             // connect timeout
@@ -157,15 +156,10 @@ class MainActivity : WebViewActivity() {
                             // 断开
                             if (status == ICallbackStatus.DISCONNECT_STATUS) {
                                 mWebView.callHandler("BandUnlock")
-                                Log.i(
-                                    "BandConnect",
-                                    "flag=$flag, disconnected, ${connectDevice?.name}"
-                                )
                                 connectStatus = false
                                 connectDevice = null
                                 mWebView.callHandler(
-                                    "OnBandDisconnected",
-                                    json(1, null, "disconnected")
+                                    "OnBandDisconnected", json(1, null, "disconnected")
                                 )
                             }
                             // 时间同步
@@ -216,6 +210,12 @@ class MainActivity : WebViewActivity() {
                             }
                             if (status == ICallbackStatus.OFFLINE_BLOOD_PRESSURE_SYNC_TIMEOUT) {
                                 mWebView.callHandler("BandUnlock")
+                            }
+                            if (status == ICallbackStatus.SYNC_TEMPERATURE_COMMAND_OK) {
+                                mWebView.callHandler(
+                                    "OnBandTemperatureSync",
+                                    json(1, null, "temperature data sync successfully")
+                                )
                             }
                         }
 
@@ -294,7 +294,6 @@ class MainActivity : WebViewActivity() {
         mDataProcessing?.let { p ->
             // 计步
             p.setOnStepChangeListener { s ->
-                mWebView.callHandler("BandUnlock")
                 s?.let { it ->
                     val data = BandStepData(
                         it.step,
@@ -426,9 +425,9 @@ class MainActivity : WebViewActivity() {
             if (!connectStatus || connectDevice == null)
                 return@WVJBHandler function.onResult(json(0, null, "no band connected"))
             mWriteCommand?.let {
+                Log.i("BandConnect", "sync time")
                 mWebView.callHandler("BandLock")
                 it.syncBLETime()
-                Log.i("BandConnect", "sync time")
                 function.onResult(json(1, null, "sync time"))
             }
         })
@@ -569,6 +568,19 @@ class MainActivity : WebViewActivity() {
                 if (data.flag!!) it.sendBloodPressureTestCommand(GlobalVariable.BLOOD_PRESSURE_TEST_START)
                 else it.sendBloodPressureTestCommand(GlobalVariable.BLOOD_PRESSURE_TEST_STOP)
                 function.onResult(json(1, null, "test blood pressure ${data.flag}"))
+            }
+        })
+        // 同步体温
+        mWebView.registerHandler("syncTemperature", WVJBHandler<Any?, Any?> { _, function ->
+            Log.i(tag, "js call sync temperature")
+            if (!checkBle()) return@WVJBHandler function.onResult(
+                json(0, null, "ble device is off")
+            )
+            if (!connectStatus || connectDevice == null)
+                return@WVJBHandler function.onResult(json(0, null, "no band connected"))
+            mWriteCommand?.let {
+                it.syncAllTemperatureData()
+                function.onResult(json(1, null, "sync all temperature data"))
             }
         })
 
