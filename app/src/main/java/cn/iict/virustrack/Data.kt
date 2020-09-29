@@ -127,25 +127,69 @@ data class BandStepData(
     val step: Int,
     val distance: Float,
     val calories: Float,
-    val runSteps: Int,
-    val runDistance: Float,
-    val runDurationTime: Int,
-    val walkSteps: Int,
-    val walkCalories: Float,
-    val walkDistance: Float,
-    val walkDurationTime: Int
+    val runSteps: Int? = null,
+    val runDistance: Float? = null,
+    val runDurationTime: Int? = null,
+    val walkSteps: Int? = null,
+    val walkCalories: Float? = null,
+    val walkDistance: Float? = null,
+    val walkDurationTime: Int? = null
 )
 
 // 心率
 data class BandRateData(
-    val rate: Int,
-    val status: Int
+    val rate: Int?,
+    val status: Int?
 )
+data class BandOneDayRateData(
+    val current:Int,
+    val lowest:Int,
+    val average:Int,
+    val highest:Int
+)
+data class BandSleepData(
+    val total:Int,
+    val deep:Int,
+    val light:Int,
+    val awakeTime:Int,
+    val awakeCount:Int,
+    val begin:Int,
+    val end:Int,
+    val sleepStatus:IntArray,
+    val durationTime:IntArray,
+    val timePoint:IntArray
+
+) {
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+
+        other as BandSleepData
+
+        if (!sleepStatus.contentEquals(other.sleepStatus)) return false
+        if (!durationTime.contentEquals(other.durationTime)) return false
+        if (!timePoint.contentEquals(other.timePoint)) return false
+
+        return true
+    }
+
+    override fun hashCode(): Int {
+        var result = sleepStatus.contentHashCode()
+        result = 31 * result + durationTime.contentHashCode()
+        result = 31 * result + timePoint.contentHashCode()
+        return result
+    }
+}
+
 // 血压
 data class BloodPressureData(
-    val p0: Int,
-    val p1: Int,
-    val p2: Int
+    val p0: Int?,
+    val p1: Int?,
+    val p2: Int?
+)
+
+data class BandDateData(
+    val date: String
 )
 
 // 开关类，只有一个参数，只有true或者false

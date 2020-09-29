@@ -24,13 +24,18 @@ import com.yc.pedometer.sdk.*
 import com.yc.pedometer.utils.GlobalVariable
 import wendu.webviewjavascriptbridge.WVJBWebView
 import wendu.webviewjavascriptbridge.WVJBWebView.WVJBHandler
+import wendu.webviewjavascriptbridge.WVJBWebView.WVJBResponseCallback
 
 class MainActivity : WebViewActivity() {
     private var splashView: LinearLayout? = null
+
+    // 接下来5个是UTE手环常用的操作对象
     private var mBLEServiceOperate: BLEServiceOperate? = null
     private var mBluetoothLeService: BluetoothLeService? = null
+    private var mSQLOperate: UTESQLOperate? = null
     private var mWriteCommand: WriteCommandToBLE? = null
     private var mDataProcessing: DataProcessing? = null
+
     private var connectStatus: Boolean = false
     private var connectDevice: BleDeviceData? = null
 
@@ -55,6 +60,7 @@ class MainActivity : WebViewActivity() {
         mBLEServiceOperate = BLEServiceOperate.getInstance(applicationContext)
         mWriteCommand = WriteCommandToBLE.getInstance(applicationContext)
         mDataProcessing = DataProcessing.getInstance(applicationContext)
+        mSQLOperate = UTESQLOperate.getInstance(applicationContext)
 
         // 注册接收器，手环版本，电量这些
         val mFilter = IntentFilter()
@@ -344,24 +350,23 @@ class MainActivity : WebViewActivity() {
             Log.i(tag, "js call scan band")
             Log.i(tag, data.toString())
             val data = Gson().fromJson(data.toString(), ScanBleData::class.java)
-            if (!checkBle()) return@WVJBHandler function.onResult(
-                json(0, null, "ble device is off")
-            )
-            mBLEServiceOperate?.let {
-                if (!it.isSupportBle4_0) return@WVJBHandler function.onResult(
-                    json(0, null, "ble 4.0 is not support")
-                )
-                Log.i(tag, "start scan band")
-                it.stopLeScan() //先关闭原来的扫描，不重复扫描
-                it.startLeScan()
-                // 定时关闭蓝牙扫描
-                handler.postDelayed({
-                    Log.i(tag, "stop scan band")
-                    it.stopLeScan()
-                    mWebView.callHandler("OnBandScanFinish", json(1, null, "Finish Scan"))
-                }, data.time)
+            if (check(function)) {
+                mBLEServiceOperate?.let {
+                    if (!it.isSupportBle4_0) return@WVJBHandler function.onResult(
+                        json(0, null, "ble 4.0 is not support")
+                    )
+                    Log.i(tag, "start scan band")
+                    it.stopLeScan() //先关闭原来的扫描，不重复扫描
+                    it.startLeScan()
+                    // 定时关闭蓝牙扫描
+                    handler.postDelayed({
+                        Log.i(tag, "stop scan band")
+                        it.stopLeScan()
+                        mWebView.callHandler("OnBandScanFinish", json(1, null, "Finish Scan"))
+                    }, data.time)
 
-                function.onResult(json(1, null, "start scan the bands"))
+                    function.onResult(json(1, null, "start scan the bands"))
+                }
             }
         })
 
@@ -370,21 +375,20 @@ class MainActivity : WebViewActivity() {
             Log.i(tag, "js call connect band")
             Log.i(tag, data.toString())
             val data = Gson().fromJson(data.toString(), BleDeviceData::class.java)
-            if (!checkBle()) return@WVJBHandler function.onResult(
-                json(0, null, "ble device is off")
-            )
-            mBLEServiceOperate?.let {
-                mWebView.callHandler("BandLock")
-                // 已经是连接状态，禁止再连接
-                if (connectStatus && connectDevice != null) {
-                    mWebView.callHandler("BandUnlock")
-                    function.onResult(json(0, null, "Already connected, disconnect first"))
-                } else {
-                    // reset connect status
-                    connectDevice = data
-                    connectStatus = false
-                    it.connect(data.mac)
-                    function.onResult(json(1, null, "connecting"))
+            if (check(function)) {
+                mBLEServiceOperate?.let {
+                    mWebView.callHandler("BandLock")
+                    // 已经是连接状态，禁止再连接
+                    if (connectStatus && connectDevice != null) {
+                        mWebView.callHandler("BandUnlock")
+                        function.onResult(json(0, null, "Already connected, disconnect first"))
+                    } else {
+                        // reset connect status
+                        connectDevice = data
+                        connectStatus = false
+                        it.connect(data.mac)
+                        function.onResult(json(1, null, "connecting"))
+                    }
                 }
             }
         })
@@ -392,220 +396,329 @@ class MainActivity : WebViewActivity() {
         // 检查已连接的手环
         mWebView.registerHandler("checkBand", WVJBHandler<Any?, Any?> { _, function ->
             Log.i(tag, "js call check band")
-            Log.i(tag, "$connectStatus $connectDevice")
-            if (!checkBle()) return@WVJBHandler function.onResult(
-                json(0, null, "ble device is off")
-            )
-            if (connectStatus && connectDevice != null)
-                function.onResult(json(1, connectDevice, "connected"))
-            else {
-                connectDevice = null
-                function.onResult(json(0, null, "unconnected"))
+            if (check(function)) {
+                if (connectStatus && connectDevice != null)
+                    function.onResult(json(1, connectDevice, "connected"))
+                else {
+                    connectDevice = null
+                    function.onResult(json(0, null, "unconnected"))
+                }
             }
         })
 
         // 断开连接
         mWebView.registerHandler("disConnectBand", WVJBHandler<Any?, Any?> { _, function ->
             Log.i(tag, "js call disconnect band")
-            if (!checkBle()) return@WVJBHandler function.onResult(
-                json(0, null, "ble device is off")
-            )
-            mBLEServiceOperate?.let {
-                mWebView.callHandler("BandLock")
-                it.disConnect()
-                Log.i("BandConnect", "Start to disconnect")
-                function.onResult(json(1, null, "disconnect"))
+            if (check(function)) {
+                mBLEServiceOperate?.let {
+                    mWebView.callHandler("BandLock")
+                    it.disConnect()
+                    Log.i("BandConnect", "Start to disconnect")
+                    function.onResult(json(1, null, "disconnect"))
+                }
             }
         })
         mWebView.registerHandler("syncBandTime", WVJBHandler<Any?, Any?> { _, function ->
             Log.i(tag, "js call sync band time")
-            if (!checkBle()) return@WVJBHandler function.onResult(
-                json(0, null, "ble device is off")
-            )
-            if (!connectStatus || connectDevice == null)
-                return@WVJBHandler function.onResult(json(0, null, "no band connected"))
-            mWriteCommand?.let {
-                Log.i("BandConnect", "sync time")
-                mWebView.callHandler("BandLock")
-                it.syncBLETime()
-                function.onResult(json(1, null, "sync time"))
+            if (check(function, true)) {
+                mWriteCommand?.let {
+                    Log.i("BandConnect", "sync time")
+                    mWebView.callHandler("BandLock")
+                    it.syncBLETime()
+                    function.onResult(json(1, null, "sync time"))
+                }
             }
         })
 
         // 获取手环版本
         mWebView.registerHandler("bandVersion", WVJBHandler<Any?, Any?> { _, function ->
             Log.i(tag, "js call band version")
-            if (!checkBle()) return@WVJBHandler function.onResult(
-                json(0, null, "ble device is off")
-            )
-            if (!connectStatus || connectDevice == null)
-                return@WVJBHandler function.onResult(json(0, null, "no band connected"))
-            mWriteCommand?.let {
-                mWebView.callHandler("BandLock")
-                it.sendToReadBLEVersion()
-                function.onResult(json(1, null, "broadcast version"))
+            if (check(function, true)) {
+                mWriteCommand?.let {
+                    mWebView.callHandler("BandLock")
+                    it.sendToReadBLEVersion()
+                    function.onResult(json(1, null, "broadcast version"))
+                }
             }
         })
 
         // 获取手环电量
         mWebView.registerHandler("bandBattery", WVJBHandler<Any?, Any?> { _, function ->
             Log.i(tag, "js call band battery")
-            if (!checkBle()) return@WVJBHandler function.onResult(
-                json(0, null, "ble device is off")
-            )
-            if (!connectStatus || connectDevice == null)
-                return@WVJBHandler function.onResult(json(0, null, "no band connected"))
-            mWriteCommand?.let {
-                mWebView.callHandler("BandLock")
-                it.sendToReadBLEBattery()
-                function.onResult(json(1, null, "broadcast battery"))
+            if (check(function, true)) {
+                mWriteCommand?.let {
+                    mWebView.callHandler("BandLock")
+                    it.sendToReadBLEBattery()
+                    function.onResult(json(1, null, "broadcast battery"))
+                }
             }
         })
 
         // 获取体温
         mWebView.registerHandler("bodyTemperature", WVJBHandler<Any?, Any?> { _, function ->
             Log.i(tag, "js call band body temperature")
-            if (!checkBle()) return@WVJBHandler function.onResult(
-                json(0, null, "ble device is off")
-            )
-            if (!connectStatus || connectDevice == null)
-                return@WVJBHandler function.onResult(json(0, null, "no band connected"))
-            mWriteCommand?.let {
-                mWebView.callHandler("BandLock")
-                it.queryCurrentTemperatureData()
-                function.onResult(json(1, null, "test temperature"))
+            if (check(function, true)) {
+                mWriteCommand?.let {
+                    mWebView.callHandler("BandLock")
+                    it.queryCurrentTemperatureData()
+                    function.onResult(json(1, null, "test temperature"))
+                }
             }
         })
 
         // 同步计步
         mWebView.registerHandler("syncStep", WVJBHandler<Any?, Any?> { _, function ->
             Log.i(tag, "js call sync step")
-            if (!checkBle()) return@WVJBHandler function.onResult(
-                json(0, null, "ble device is off")
-            )
-            if (!connectStatus || connectDevice == null)
-                return@WVJBHandler function.onResult(json(0, null, "no band connected"))
-            mWriteCommand?.let {
-                mWebView.callHandler("BandLock")
-                it.syncAllStepData()
-                function.onResult(json(1, null, "sync step data"))
+            if (check(function, true)) {
+                mWriteCommand?.let {
+                    mWebView.callHandler("BandLock")
+                    it.syncAllStepData()
+                    function.onResult(json(1, null, "sync step data"))
+                }
             }
         })
 
         // 同步睡眠
         mWebView.registerHandler("syncSleep", WVJBHandler<Any?, Any?> { _, function ->
             Log.i(tag, "js call sync sleep")
-            if (!checkBle()) return@WVJBHandler function.onResult(
-                json(0, null, "ble device is off")
-            )
-            if (!connectStatus || connectDevice == null)
-                return@WVJBHandler function.onResult(json(0, null, "no band connected"))
-            mWriteCommand?.let {
-                mWebView.callHandler("BandLock")
-                it.syncAllSleepData()
-                function.onResult(json(1, null, "sync sleep data"))
+            if (check(function, true)) {
+                mWriteCommand?.let {
+                    mWebView.callHandler("BandLock")
+                    it.syncAllSleepData()
+                    function.onResult(json(1, null, "sync sleep data"))
+                }
             }
         })
 
         // 同步心率
         mWebView.registerHandler("syncRate", WVJBHandler<Any?, Any?> { _, function ->
             Log.i(tag, "js call sync rate")
-            if (!checkBle()) return@WVJBHandler function.onResult(
-                json(0, null, "ble device is off")
-            )
-            if (!connectStatus || connectDevice == null)
-                return@WVJBHandler function.onResult(json(0, null, "no band connected"))
-            mWriteCommand?.let {
-                mWebView.callHandler("BandLock")
-                it.syncAllRateData()
-                function.onResult(json(1, null, "sync rate data"))
+            if (check(function, true)) {
+                mWriteCommand?.let {
+                    mWebView.callHandler("BandLock")
+                    it.syncAllRateData()
+                    function.onResult(json(1, null, "sync rate data"))
+                }
             }
         })
 
         // 心率测试开关
         mWebView.registerHandler("testRate", WVJBHandler<Any?, Any?> { data, function ->
             Log.i(tag, "js call test rate")
-            if (!checkBle()) return@WVJBHandler function.onResult(
-                json(0, null, "ble device is off")
-            )
             Log.i(tag, data.toString())
             val data = Gson().fromJson(data.toString(), SwitchData::class.java)
-            if (!connectStatus || connectDevice == null)
-                return@WVJBHandler function.onResult(json(0, null, "no band connected"))
-            mWriteCommand?.let {
-                mWebView.callHandler("BandLock")
-                if (data.flag!!) it.sendRateTestCommand(GlobalVariable.RATE_TEST_START)
-                else it.sendRateTestCommand(GlobalVariable.RATE_TEST_STOP)
-                function.onResult(json(1, null, "test rate data ${data.flag}"))
+            if (check(function, true)) {
+                mWriteCommand?.let {
+                    mWebView.callHandler("BandLock")
+                    if (data.flag!!) it.sendRateTestCommand(GlobalVariable.RATE_TEST_START)
+                    else it.sendRateTestCommand(GlobalVariable.RATE_TEST_STOP)
+                    function.onResult(json(1, null, "test rate data ${data.flag}"))
+                }
             }
         })
 
         // 同步血压
         mWebView.registerHandler("syncBloodPressure", WVJBHandler<Any?, Any?> { _, function ->
             Log.i(tag, "js call sync blood pressure")
-            if (!checkBle()) return@WVJBHandler function.onResult(
-                json(0, null, "ble device is off")
-            )
-            if (!connectStatus || connectDevice == null)
-                return@WVJBHandler function.onResult(json(0, null, "no band connected"))
-            mWriteCommand?.let {
-                it.syncAllBloodPressureData()
-                function.onResult(json(1, null, "sync blood pressure"))
+            if (check(function, true)) {
+                mWriteCommand?.let {
+                    it.syncAllBloodPressureData()
+                    function.onResult(json(1, null, "sync blood pressure"))
+                }
             }
         })
 
         // 测试血压
         mWebView.registerHandler("testBloodPressure", WVJBHandler<Any?, Any?> { data, function ->
             Log.i(tag, "js call test blood pressure")
-            if (!checkBle()) return@WVJBHandler function.onResult(
-                json(0, null, "ble device is off")
-            )
             Log.i(tag, data.toString())
             val data = Gson().fromJson(data.toString(), SwitchData::class.java)
-            if (!connectStatus || connectDevice == null)
-                return@WVJBHandler function.onResult(json(0, null, "no band connected"))
-            mWriteCommand?.let {
-                if (data.flag!!) it.sendBloodPressureTestCommand(GlobalVariable.BLOOD_PRESSURE_TEST_START)
-                else it.sendBloodPressureTestCommand(GlobalVariable.BLOOD_PRESSURE_TEST_STOP)
-                function.onResult(json(1, null, "test blood pressure ${data.flag}"))
+            if (check(function, true)) {
+                mWriteCommand?.let {
+                    if (data.flag!!) it.sendBloodPressureTestCommand(GlobalVariable.BLOOD_PRESSURE_TEST_START)
+                    else it.sendBloodPressureTestCommand(GlobalVariable.BLOOD_PRESSURE_TEST_STOP)
+                    function.onResult(json(1, null, "test blood pressure ${data.flag}"))
+                }
             }
         })
         // 同步体温
         mWebView.registerHandler("syncTemperature", WVJBHandler<Any?, Any?> { _, function ->
             Log.i(tag, "js call sync temperature")
-            if (!checkBle()) return@WVJBHandler function.onResult(
-                json(0, null, "ble device is off")
-            )
-            if (!connectStatus || connectDevice == null)
-                return@WVJBHandler function.onResult(json(0, null, "no band connected"))
-            mWriteCommand?.let {
-                it.syncAllTemperatureData()
-                function.onResult(json(1, null, "sync all temperature data"))
+            if (check(function, true)) {
+                mWriteCommand?.let {
+                    it.syncAllTemperatureData()
+                    function.onResult(json(1, null, "sync all temperature data"))
+                }
             }
         })
 
         // 检查采集体温开关
         mWebView.registerHandler("temperatureStatus", WVJBHandler<Any?, Any?> { data, function ->
             Log.i(tag, "js call set/get temp status")
-            if (!checkBle()) return@WVJBHandler function.onResult(
-                json(0, null, "ble device is off")
-            )
             Log.i(tag, data.toString())
             val data = Gson().fromJson(data.toString(), SwitchData::class.java)
-            if (!connectStatus || connectDevice == null)
-                return@WVJBHandler function.onResult(json(0, null, "no band connected"))
-            mWriteCommand?.let {
-                if (data.flag == null) { //null时查询
-                    Log.i(tag, "get temp status")
-                    it.queryRawTemperatureStatus()
-                    function.onResult(json(1, null, "query raw temperature status"))
-                } else {
-                    Log.i(tag, "set temp status")
-                    it.setRawTemperatureStatus(data.flag)
-                    function.onResult(json(1, null, "set raw temperature status, ${data.flag}"))
+            if (check(function, true)) {
+                mWriteCommand?.let {
+                    if (data.flag == null) { //null时查询
+                        Log.i(tag, "get temp status")
+                        it.queryRawTemperatureStatus()
+                        function.onResult(json(1, null, "query raw temperature status"))
+                    } else {
+                        Log.i(tag, "set temp status")
+                        it.setRawTemperatureStatus(data.flag)
+                        function.onResult(json(1, null, "set raw temperature status, ${data.flag}"))
+                    }
                 }
             }
         })
+
+        // 各种数据库读写
+        mWebView.registerHandler("queryStepDate", WVJBHandler<Any?, Any?> { data, function ->
+            Log.i(tag, "js call query step date")
+            Log.i(tag, data.toString())
+            val data = Gson().fromJson(data.toString(), BandDateData::class.java)
+            if (check(function, true)) {
+                // 当日步数
+                val data = mSQLOperate?.queryStepDate(data.date)
+                function.onResult(json(1, data, "one day step"))
+            }
+        })
+        mWebView.registerHandler("queryStepInfo", WVJBHandler<Any?, Any?> { data, function ->
+            Log.i(tag, "js call query step info")
+            Log.i(tag, data.toString())
+            val data = Gson().fromJson(data.toString(), BandDateData::class.java)
+            if (check(function, true)) {
+                mSQLOperate?.let {
+                    val i = it.queryStepInfo(data.date)
+                    if (i != null) {
+                        // 步数详细
+                        val data = BandStepData(i.step, i.distance, i.calories)
+                        function.onResult(json(1, data, "one day step"))
+                    } else function.onResult(json(0, null, "no one day step"))
+                }
+            }
+        })
+        // 返回睡眠时间int
+        mWebView.registerHandler("querySleepDate", WVJBHandler<Any?, Any?> { data, function ->
+            Log.i(tag, "js call query sleep date")
+            Log.i(tag, data.toString())
+            val data = Gson().fromJson(data.toString(), BandDateData::class.java)
+            if (check(function, true)) {
+                // 返回睡眠时间，int，单位是分钟
+                val data = mSQLOperate?.querySleepDate(data.date)
+                function.onResult(json(1, data, "one day sleep"))
+            }
+        })
+        // 返回详细睡眠信息
+        mWebView.registerHandler("querySleepInfo", WVJBHandler<Any?, Any?> { data, function ->
+            Log.i(tag, "js call query sleep info")
+            Log.i(tag, data.toString())
+            val data = Gson().fromJson(data.toString(), BandDateData::class.java)
+            if (check(function, true)) {
+                mSQLOperate?.let {
+                    val i = it.querySleepInfo(data.date)
+                    if (i != null) {
+                        // 步数详细
+                        val data = BandSleepData(
+                            i.sleepTotalTime,
+                            i.deepTime,
+                            i.lightTime,
+                            i.awakeTime,
+                            i.awakeCount,
+                            i.beginTime,
+                            i.endTime,
+                            i.sleepStatueArray,
+                            i.durationTimeArray,
+                            i.timePointArray
+                        )
+                        function.onResult(json(1, data, "sleep info"))
+                    } else function.onResult(json(0, null, "no sleep info"))
+                }
+            }
+        })
+        // 返回某一天最高最低当前平均心率
+        mWebView.registerHandler("queryRateDate", WVJBHandler<Any?, Any?> { data, function ->
+            Log.i(tag, "js call query rate date")
+            Log.i(tag, data.toString())
+            val data = Gson().fromJson(data.toString(), BandDateData::class.java)
+            if (check(function, true)) {
+                mSQLOperate?.let {
+                    val i = it.queryRateOneDayMainInfo(data.date)
+                    if (i != null) {
+                        val data =
+                            BandOneDayRateData(
+                                i.currentRate,
+                                i.lowestRate,
+                                i.verageRate,
+                                i.highestRate
+                            )
+                        function.onResult(json(1, data, "rate data"))
+                    } else function.onResult(json(0, null, "no rate data"))
+                }
+            }
+        })
+        // 返回某一天最高最低当前平均心率
+        mWebView.registerHandler("queryRateInfo", WVJBHandler<Any?, Any?> { data, function ->
+            Log.i(tag, "js call query rate info")
+            Log.i(tag, data.toString())
+            val data = Gson().fromJson(data.toString(), BandDateData::class.java)
+            if (check(function, true)) {
+                mSQLOperate?.let {
+                    val i = it.queryRateOneDayDetailInfo(data.date)
+                    val data = HashMap<String, BandOneDayRateData>()
+                    for (v in i) {
+                        data[v.time.toString()] = BandOneDayRateData(
+                            v.currentRate,
+                            v.lowestRate,
+                            v.verageRate,
+                            v.highestRate
+                        )
+                    }
+                    function.onResult(json(1, data, "rate info"))
+                }
+            }
+        })
+        // 返回某一天血压
+        mWebView.registerHandler(
+            "queryBloodPressureDate",
+            WVJBHandler<Any?, Any?> { data, function ->
+                Log.i(tag, "js call query sleep info")
+                Log.i(tag, data.toString())
+                val data = Gson().fromJson(data.toString(), BandDateData::class.java)
+                if (check(function, true)) {
+                    mSQLOperate?.let {
+                        val i = it.queryBloodPressureOneDayInfo(data.date)
+                        val data = HashMap<String, BloodPressureData>()
+                        for (v in i) {
+                            data[v.bloodPressureTime.toString()] =
+                                BloodPressureData(v.hightBloodPressure, v.lowBloodPressure, 0)
+                        }
+                        function.onResult(json(1, data, "blood pressure date data"))
+                    }
+                }
+            })
+    }
+
+    // 检查蓝牙状态是否完备
+    private fun check(function: WVJBResponseCallback<Any>, band: Boolean = false): Boolean {
+        // 检查蓝牙
+        if (!checkBle()) {
+            function.onResult(json(0, null, "ble service is not ready"))
+            return false
+        }
+        // 检查sdk
+        if (mBLEServiceOperate == null || mWriteCommand == null || mSQLOperate == null || mBluetoothLeService == null) {
+            function.onResult(json(0, null, "band sdk is not ready"))
+            return false
+        }
+        Log.i("band", band.toString())
+        // 检查连接手环
+        if (band && (!connectStatus || connectDevice == null)) {
+            function.onResult(json(0, null, "band is not connected"))
+            return false
+        }
+        // 通过
+        return true
     }
 
     override fun onLoadFinish() {
