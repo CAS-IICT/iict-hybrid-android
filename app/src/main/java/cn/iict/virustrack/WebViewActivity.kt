@@ -52,8 +52,8 @@ import kotlin.collections.HashMap
 
 open class WebViewActivity : Activity() {
 
-    open var url = "http://192.168.1.79:8080"
-    //open var url = "http://192.168.1.210:8080" //前端
+    //open var url = "http://192.168.1.79:8080"
+    open var url = "http://192.168.1.210:8080" //前端
 
     open val tag: String = this.javaClass.simpleName
     private var loading: Boolean = false
@@ -264,15 +264,12 @@ open class WebViewActivity : Activity() {
     }
 
     // use to init all the bridge functions to handle js call, only for the activities which extends jsActivity
-    @Suppress("RECEIVER_NULLABILITY_MISMATCH_BASED_ON_JAVA_ANNOTATIONS")
-    @SuppressLint("MissingPermission")
-
     open fun checkBle(): Boolean {
         val blueAdapter = BluetoothAdapter.getDefaultAdapter()
         return blueAdapter != null && blueAdapter.isEnabled
     }
 
-    // 初始化蓝牙广播
+    // 生成uuid
     open fun setUuids(): HashMap<String, UUID> {
         val uuids = HashMap<String, UUID>()
         uuids["uuidServer"] = UUID.randomUUID()
@@ -282,11 +279,7 @@ open class WebViewActivity : Activity() {
         return uuids
     }
 
-    // 初始化广播GATT
-    /*
-     * @uuids 生成的uuid
-     * @data 蓝牙需要携带的信息
-     */
+    // 初始化广播，GATT
     @TargetApi(Build.VERSION_CODES.LOLLIPOP)
     fun initGATT(uuids: HashMap<String, UUID>) {
         val settings: AdvertiseSettings = AdvertiseSettings.Builder()
@@ -407,17 +400,17 @@ open class WebViewActivity : Activity() {
 
     private var isExit = 0
     override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
-        Log.i(tag, "on key down")
         if (keyCode == KeyEvent.KEYCODE_BACK) {
             return if (mWebView!!.canGoBack()) {
                 Log.i(tag, "webview go back")
                 mWebView?.goBack()
                 true
             } else {
-                Log.i(tag, "Activity go back")
-                isExit++
-                exit()
-                false
+                if (this.isTaskRoot) {
+                    isExit++
+                    exit()
+                    false
+                } else super.onKeyDown(keyCode, event)
             }
         }
         return super.onKeyDown(keyCode, event)
@@ -605,8 +598,8 @@ open class WebViewActivity : Activity() {
                 mBluetoothAdapter.bluetoothLeAdvertiser
             bluetoothLeAdvertiser.stopAdvertising(object : AdvertiseCallback() {})
         }
-        super.onDestroy()
         mWebView?.destroy()
+        super.onDestroy()
     }
 }
 

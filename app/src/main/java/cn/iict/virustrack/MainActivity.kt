@@ -652,7 +652,7 @@ class MainActivity : WebViewActivity() {
                                 i.verageRate,
                                 i.highestRate
                             )
-                        function.onResult(json(1, data, "rate data"))
+                        function.onResult(json(1, data, "rate date"))
                     } else function.onResult(json(0, null, "no rate data"))
                 }
             }
@@ -688,15 +688,65 @@ class MainActivity : WebViewActivity() {
                 if (check(function, true)) {
                     mSQLOperate?.let {
                         val i = it.queryBloodPressureOneDayInfo(data.date)
-                        val data = HashMap<String, BloodPressureData>()
+                        val data = ArrayList<BloodPressureData>()
                         for (v in i) {
-                            data[v.bloodPressureTime.toString()] =
-                                BloodPressureData(v.hightBloodPressure, v.lowBloodPressure, 0)
+                            Log.i("blood",v.bloodPressureTime.toString())
+                            data.add(BloodPressureData(v.hightBloodPressure, v.lowBloodPressure, 0))
                         }
                         function.onResult(json(1, data, "blood pressure date data"))
                     }
                 }
             })
+        // 返回某一天体温
+        mWebView.registerHandler("queryTemperatureDate", WVJBHandler<Any?, Any?> { data, function ->
+            Log.i(tag, "js call query temperature date")
+            Log.i(tag, data.toString())
+            val data = Gson().fromJson(data.toString(), BandDateData::class.java)
+            if (check(function, true)) {
+                mSQLOperate?.let {
+                    val i = it.queryTemperatureDate(data.date)
+                    val data = ArrayList<TemperatureInfoData>()
+                    for (v in i) {
+                        data.add(
+                            TemperatureInfoData(
+                                v.calendar,
+                                v.startDate,
+                                v.secondTime,
+                                v.bodySurfaceTemperature,
+                                v.bodyTemperature,
+                                v.ambientTemperature,
+                                v.type
+                            )
+                        )
+                    }
+                    function.onResult(json(1, data, "query temperature date data"))
+                }
+            }
+        })
+        // 返回全部体温
+        mWebView.registerHandler("queryTemperatureInfo", WVJBHandler<Any?, Any?> { _, function ->
+            Log.i(tag, "js call query temperature info all data")
+            if (check(function, true)) {
+                mSQLOperate?.let {
+                    val i = it.queryTemperatureAll()
+                    val data = ArrayList<TemperatureInfoData>()
+                    for (v in i) {
+                        data.add(
+                            TemperatureInfoData(
+                                v.calendar,
+                                v.startDate,
+                                v.secondTime,
+                                v.bodySurfaceTemperature,
+                                v.bodyTemperature,
+                                v.ambientTemperature,
+                                v.type
+                            )
+                        )
+                    }
+                    function.onResult(json(1, data, "query temperature all data"))
+                }
+            }
+        })
     }
 
     // 检查蓝牙状态是否完备

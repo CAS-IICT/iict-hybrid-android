@@ -122,6 +122,16 @@ data class BandTemperatureData(
     val ambientTemperature: Float
 )
 
+data class TemperatureInfoData(
+    val calendar: String,
+    val startDate: String,
+    val secondTime: Int,
+    val bodySurfaceTemperature: Float,
+    val bodyTemperature: Float,
+    val ambientTemperature: Float,
+    val type: Int
+)
+
 // 计步
 data class BandStepData(
     val step: Int,
@@ -141,23 +151,25 @@ data class BandRateData(
     val rate: Int?,
     val status: Int?
 )
+
 data class BandOneDayRateData(
-    val current:Int,
-    val lowest:Int,
-    val average:Int,
-    val highest:Int
+    val current: Int,
+    val lowest: Int,
+    val average: Int,
+    val highest: Int
 )
+
 data class BandSleepData(
-    val total:Int,
-    val deep:Int,
-    val light:Int,
-    val awakeTime:Int,
-    val awakeCount:Int,
-    val begin:Int,
-    val end:Int,
-    val sleepStatus:IntArray,
-    val durationTime:IntArray,
-    val timePoint:IntArray
+    val total: Int,
+    val deep: Int,
+    val light: Int,
+    val awakeTime: Int,
+    val awakeCount: Int,
+    val begin: Int,
+    val end: Int,
+    val sleepStatus: IntArray,
+    val durationTime: IntArray,
+    val timePoint: IntArray
 
 ) {
     override fun equals(other: Any?): Boolean {
