@@ -6,7 +6,7 @@ import android.view.animation.AlphaAnimation
 import android.view.animation.Animation
 
 
-class Animation {
+object Animation {
 
     fun fadeOut(view: View, duration: Long = 500) {
         if (view.visibility != View.VISIBLE) return

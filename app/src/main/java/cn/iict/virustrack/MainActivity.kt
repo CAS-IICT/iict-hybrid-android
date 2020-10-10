@@ -39,17 +39,14 @@ class MainActivity : WebViewActivity() {
     private var connectStatus: Boolean = false
     private var connectDevice: BleDeviceData? = null
 
-    private val content = R.layout.activity_main
+    override val content = R.layout.activity_main
     override val tag = this.javaClass.simpleName
     private val handler = Handler()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(content)
-        splashView = findViewById(R.id.splash)
-        findViewById<WVJBWebView>(R.id.webview)?.let {
-            mWebView = it
-            initWebView(it)
+        mWebView?.let {
+            splashView = findViewById(R.id.splash)
             initBridge(it)
         }
     }
@@ -774,14 +771,14 @@ class MainActivity : WebViewActivity() {
     override fun onLoadFinish() {
         super.onLoadFinish()
         splashView?.let {
-            Animation().fadeOut(it as View, 1000)
+            Animation.fadeOut(it as View, 1000)
         }
     }
 
     override fun onLoadError() {
         super.onLoadError()
         splashView?.let {
-            Animation().fadeOut(it as View, 1000)
+            Animation.fadeOut(it as View, 1000)
         }
     }
 

@@ -57,25 +57,25 @@ open class WebViewActivity : Activity() {
 
     open val tag: String = this.javaClass.simpleName
     private var loading: Boolean = false
-    private val content: Int = R.layout.activity_webview // overridable
+    open val content: Int = R.layout.activity_webview // overridable
     open var mWebView: WVJBWebView? = null
 
     private val handler = Handler()
     val imagePicker: ImagePicker = ImagePicker()
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        Log.i("Activity", tag) // 提示当前所处activity
         super.onCreate(savedInstanceState)
-        // 获取权限，蓝牙，wifi等
-        getPermission()
+        setContentView(content)
         val bundle = this.intent.extras
         bundle?.getBoolean("loading")?.let { loading = it }
         // 当有url传入的时候在本类中直接调用initWebView，该类一般不被继承了
-        bundle?.getString("url")?.let {
-            setContentView(content)
-            val mWebView: WVJBWebView = findViewById(R.id.webview)
-            this.mWebView = mWebView
-            url = it
-            initWebView(mWebView, loading)
+        bundle?.getString("url")?.let { url = it }
+        // 获取权限，蓝牙，wifi等
+        getPermission()
+        findViewById<WVJBWebView>(R.id.webview)?.let {
+            mWebView = it
+            initWebView(it, loading)
         }
     }
 
@@ -166,7 +166,7 @@ open class WebViewActivity : Activity() {
     }
 
     open fun initBridge(mWebView: WVJBWebView) {
-        Init().initBridge(mWebView, this)
+        Init.initBridge(mWebView, this)
     }
 
     open fun onLoadFinish() {
@@ -387,7 +387,7 @@ open class WebViewActivity : Activity() {
     fun goMap(path: String = "") {
         val intent = Intent(this, MapActivity::class.java)
         val bundle = Bundle()
-        bundle.putString("path", path)
+        bundle.putString("url", url + path)
         intent.putExtras(bundle)
         startActivity(intent)
     }

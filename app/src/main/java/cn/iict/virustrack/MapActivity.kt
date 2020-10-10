@@ -31,24 +31,19 @@ class MapActivity : WebViewActivity(), LocationSource, AMapLocationListener {
     //定位需要的数据
     private var mListener: LocationSource.OnLocationChangedListener? = null
     private var mLocationClient: AMapLocationClient? = null
-    private val content = R.layout.activity_map
+    override val content = R.layout.activity_map
     override val tag = this.javaClass.simpleName
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(content)
-        val bundle = this.intent.extras
-        val path = bundle?.getString("path")
         // init web view
-        findViewById<WVJBWebView>(R.id.webview)?.let {
-            initWebView(it, false, url + path)
-            mWebView = it
+        mWebView?.let {
             initBridge(it)
         }
         // init map view
         findViewById<MapView>(R.id.map)?.let {
-            it.onCreate(savedInstanceState)
             mMapView = it
+            it.onCreate(savedInstanceState)
         }
     }
 
@@ -215,7 +210,7 @@ class MapActivity : WebViewActivity(), LocationSource, AMapLocationListener {
     override fun onLoadFinish() {
         super.onLoadFinish()
         findViewById<GifImageView>(R.id.loading_view)?.let {
-            Animation().fadeOut(it as View)
+            Animation.fadeOut(it as View)
         }
     }
 

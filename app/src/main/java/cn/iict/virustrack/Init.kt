@@ -29,7 +29,7 @@ import com.linchaolong.android.imagepicker.cropper.CropImageView
 import wendu.webviewjavascriptbridge.WVJBWebView
 import java.util.*
 
-class Init {
+object Init {
     open val tag: String = this.javaClass.simpleName
     private val handler = Handler()
 
