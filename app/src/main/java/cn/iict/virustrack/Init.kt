@@ -11,6 +11,7 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.graphics.Color
 import android.net.Uri
+import android.net.wifi.WifiManager
 import android.os.Build
 import android.os.Handler
 import android.util.DisplayMetrics
@@ -214,15 +215,15 @@ object Init {
                     val scanLowCallback = object : ScanCallback() {
                         override fun onScanResult(callbackType: Int, result: ScanResult?) {
                             super.onScanResult(callbackType, result)
-                            Log.i("onScanResult", result.toString())
                             result?.let {
                                 val device: BluetoothDevice = it.device
                                 val serviceUuids = it.scanRecord?.serviceUuids
                                 val returnData =
                                     activity.getBleDeviceData(device, it.rssi, serviceUuids)
                                 returnData?.let {
+                                    Log.i("onScanResult", it.toString())
                                     mWebView.callHandler(
-                                        "BleOnScanResult",
+                                        "OnBleScanResult",
                                         activity.json(
                                             1,
                                             it,
@@ -238,24 +239,21 @@ object Init {
                             val msg = "BleScan fail to scan errorCode: $errorCode"
                             Log.i(tag, msg)
                             Log.i(tag, errorCode.toString())
-                            mWebView.callHandler("BleOnScanFailed", activity.json(0, errorCode))
+                            mWebView.callHandler("OnBleScanFailed", activity.json(0, errorCode))
                         }
                     }
-                    // 已经开始扫描，低功耗蓝牙
-                    function.onResult(activity.json(1, null, "Start scan Ble in low power"))
-                    mWebView.callHandler(
-                        "BleStartScan",
-                        activity.json(1, null, "Start Scan")
-                    )
+
                     val scanner = BluetoothAdapter.getDefaultAdapter().bluetoothLeScanner
                     Log.i(tag, "start low power Ble scan for ${data.time / 1000}s")
                     scanner.startScan(scanLowCallback)
+                    // 已经开始扫描，低功耗蓝牙
+                    function.onResult(activity.json(1, null, "Start scan Ble in low power"))
                     // 定时关闭蓝牙扫描
                     handler.postDelayed({
                         scanner.stopScan(scanLowCallback)
                         Log.i(tag, "stop scan Ble")
                         mWebView.callHandler(
-                            "BleFinishScan",
+                            "OnBleFinishScan",
                             activity.json(1, null, "Finish Scan")
                         )
                     }, data.time)
@@ -272,8 +270,9 @@ object Init {
                                     val rssi = intent.getShortExtra(BluetoothDevice.EXTRA_RSSI, 0)
                                     val returnData = activity.getBleDeviceData(device, rssi.toInt())
                                     returnData?.let {
+                                        Log.i("onScanResult", it.toString())
                                         mWebView.callHandler(
-                                            "BleOnScanResult",
+                                            "OnBleScanResult",
                                             activity.json(
                                                 1,
                                                 it,
@@ -288,27 +287,24 @@ object Init {
                                     // discoveryFinished
                                     Log.i("BleScan", "Finish Discovery")
                                     mWebView.callHandler(
-                                        "BleFinishScan",
+                                        "OnBleFinishScan",
                                         activity.json(1, null, "Finish Discovery")
                                     )
                                 }
                                 action.equals(
                                     BluetoothAdapter.ACTION_DISCOVERY_STARTED, ignoreCase = true
                                 ) -> {
-                                    mWebView.callHandler(
-                                        "BleStartScan",
-                                        activity.json(1, null, "Start Discovery")
-                                    )
                                     Log.i("BleScan", "Start Discovery")
+                                    // 已经开始扫描，普通蓝牙
+                                    function.onResult(
+                                        activity.json(1, null, "Start scan Ble in all")
+                                    )
                                 }
                             }
                         }
                     }
 
-                    // 已经开始扫描，普通蓝牙
-                    function.onResult(activity.json(1, null, "Start scan Ble in all"))
                     val scanner = BluetoothAdapter.getDefaultAdapter()
-                    Log.i(tag, "start discovery, all Ble devices")
                     val filter = IntentFilter()
                     filter.addAction(BluetoothDevice.ACTION_FOUND)
                     filter.addAction(BluetoothAdapter.ACTION_DISCOVERY_FINISHED)
@@ -318,7 +314,27 @@ object Init {
                 }
             } else {
                 function.onResult(
-                    activity.json(0, null, "Bluetooth is not available")
+                    activity.json(0, null, "Bluetooth is not available, please turn on Bluetooth")
+                )
+            }
+        })
+
+        // scan wifi
+        mWebView.registerHandler("scanWifi", WVJBWebView.WVJBHandler<Any?, Any?> { _, function ->
+            Log.i(tag, "js call scanWifi")
+            if (activity.checkWifi()) {
+                val wifiManager =
+                    activity.applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
+                val list = wifiManager.scanResults
+                val data = ArrayList<WifiData>()
+                for (item in list)
+                    data.add(WifiData(item.BSSID, item.SSID, item.level, item.timestamp))
+                function.onResult(
+                    activity.json(1, data, "Wifi list")
+                )
+            } else {
+                function.onResult(
+                    activity.json(0, null, "Wifi is not available, please turn on Wifi Network")
                 )
             }
         })

@@ -75,6 +75,13 @@ data class BleDeviceData(
 
 )
 
+data class WifiData(
+    val mac: String?,
+    val name: String?,
+    val rssi: Int?,
+    val time: Long?
+)
+
 data class MapData(
     var show: String = "gone",
     var height: Int = 0,
