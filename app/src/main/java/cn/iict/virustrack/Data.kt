@@ -110,6 +110,7 @@ data class BleInfoData(
 )
 
 data class GATTData(
+    val flag: Boolean = true,
     val message: String?
 )
 

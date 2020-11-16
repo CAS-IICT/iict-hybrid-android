@@ -33,6 +33,7 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.ParcelUuid
 import android.provider.Settings
+import android.support.annotation.RequiresApi
 import android.text.TextUtils
 import android.util.Base64
 import android.util.Log
@@ -86,9 +87,9 @@ open class WebViewActivity : Activity() {
     // initial function, make all the config for jsbridge
     @SuppressLint("SetJavaScriptEnabled")
     open fun initWebView(
-            mWebView: WVJBWebView,
-            loading: Boolean = false,
-            otherUrl: String? = null
+        mWebView: WVJBWebView,
+        loading: Boolean = false,
+        otherUrl: String? = null
     ) {
         otherUrl?.let { url = it }
         Log.i(tag, "initWebView: $url")
@@ -135,9 +136,9 @@ open class WebViewActivity : Activity() {
             }
 
             override fun onReceivedHttpError(
-                    view: WebView?,
-                    request: WebResourceRequest?,
-                    errorResponse: WebResourceResponse?
+                view: WebView?,
+                request: WebResourceRequest?,
+                errorResponse: WebResourceResponse?
             ) {
                 Log.i(tag, "onReceivedHttpError")
                 super.onReceivedHttpError(view, request, errorResponse)
@@ -150,12 +151,12 @@ open class WebViewActivity : Activity() {
             override fun onReceivedTitle(view: WebView, title: String) {
                 super.onReceivedTitle(view, title)
                 if (title.contains("404")
-                        || title.contains("找不到")
-                        || title.contains("Error")
-                        || title.contains("500")
-                        || title.contains("无法打开")
-                        || title.contains("not available")
-                        || title.contains("not found")
+                    || title.contains("找不到")
+                    || title.contains("Error")
+                    || title.contains("500")
+                    || title.contains("无法打开")
+                    || title.contains("not available")
+                    || title.contains("not found")
                 ) {
                     Log.w(tag, "404 error")
                     view.loadUrl("file:///android_asset/error.html")
@@ -178,10 +179,10 @@ open class WebViewActivity : Activity() {
     open fun onLoadError() {
         Log.i(tag, "register refresh error page: $url")
         mWebView?.registerHandler(
-                "refreshErrorPage",
-                WVJBWebView.WVJBHandler<Any?, Any?> { _, function ->
-                    function.onResult(json(1, url, "refresh the error page"))
-                })
+            "refreshErrorPage",
+            WVJBWebView.WVJBHandler<Any?, Any?> { _, function ->
+                function.onResult(json(1, url, "refresh the error page"))
+            })
         showLoading(false)
     }
 
@@ -222,7 +223,7 @@ open class WebViewActivity : Activity() {
                 return "02:00:00:00:00:00"
             }
             val address =
-                    Mirror().on(bluetoothManagerService).invoke().method("getAddress").withoutArgs()
+                Mirror().on(bluetoothManagerService).invoke().method("getAddress").withoutArgs()
             return if (address != null && address is String) {
                 Log.i("BleMac", address.toString())
                 address.toString()
@@ -242,7 +243,7 @@ open class WebViewActivity : Activity() {
         try {
             val bluetoothAdapter = BluetoothAdapter.getDefaultAdapter()
             val uuids =
-                    Mirror().on(bluetoothAdapter).invoke().method("getUuids").withoutArgs() as Array<*>
+                Mirror().on(bluetoothAdapter).invoke().method("getUuids").withoutArgs() as Array<*>
             for (uuid in uuids) {
                 list.add(uuid.toString())
             }
@@ -289,98 +290,39 @@ open class WebViewActivity : Activity() {
 
     // 初始化广播，GATT 
     @TargetApi(Build.VERSION_CODES.LOLLIPOP)
-    fun initGATT(uuids: HashMap<String, UUID>) {
+    fun startGATT(uuids: HashMap<String, UUID>, callback: AdvertiseCallback) {
         val settings: AdvertiseSettings = AdvertiseSettings.Builder()
-                .setConnectable(false)
-                .setAdvertiseMode(AdvertiseSettings.ADVERTISE_MODE_BALANCED)
-                .setTxPowerLevel(AdvertiseSettings.ADVERTISE_TX_POWER_HIGH)
-                .build()
+            .setConnectable(false)
+            .setTimeout(0)
+            .setAdvertiseMode(AdvertiseSettings.ADVERTISE_MODE_BALANCED)
+            .setTxPowerLevel(AdvertiseSettings.ADVERTISE_TX_POWER_ULTRA_LOW)
+            .build()
         val advertiseData: AdvertiseData = AdvertiseData.Builder()
-                .setIncludeDeviceName(true)
-                .setIncludeTxPowerLevel(true)
-                .build()
+            .setIncludeDeviceName(true)
+            .setIncludeTxPowerLevel(true)
+            .build()
         val scanResponseData: AdvertiseData = AdvertiseData.Builder()
-                .addServiceUuid(ParcelUuid(uuids["uuidServer"]))
-                .setIncludeTxPowerLevel(true)
-                //.addServiceData(ParcelUuid(uuids["uuidServer"]), data.toByteArray())
-                .build()
-        val callback: AdvertiseCallback = object : AdvertiseCallback() {
-            override fun onStartSuccess(settingsInEffect: AdvertiseSettings?) {
-                Log.i("initGATT", "Succeed to add BLE ad, uuid: ${uuids["uuidServer"]}")
-                //startGATT(uuids)
-            }
+            .addServiceUuid(ParcelUuid(uuids["uuidServer"]))
+            .setIncludeTxPowerLevel(true)
+            //.addServiceData(ParcelUuid(uuids["uuidServer"]), data.toByteArray())
+            .build()
+        val mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter()
+        val bluetoothLeAdvertiser: BluetoothLeAdvertiser = mBluetoothAdapter.bluetoothLeAdvertiser
+        bluetoothLeAdvertiser.startAdvertising(
+            settings,
+            advertiseData,
+            scanResponseData,
+            callback
+        )
+    }
 
-            override fun onStartFailure(errorCode: Int) {
-                Log.e("initGATT", "Failed to add BLE ad, reason: $errorCode")
-            }
-        }
+    @RequiresApi(Build.VERSION_CODES.LOLLIPOP)
+    fun stopGATT(callback: AdvertiseCallback) {
         val mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter()
         val bluetoothLeAdvertiser: BluetoothLeAdvertiser =
-                mBluetoothAdapter.bluetoothLeAdvertiser
-        bluetoothLeAdvertiser.startAdvertising(settings, advertiseData, scanResponseData, callback)
+            mBluetoothAdapter.bluetoothLeAdvertiser
+        bluetoothLeAdvertiser.stopAdvertising(callback)
     }
-
-    // 启动uuid蓝牙广播
-    private fun startGATT(uuids: HashMap<String, UUID>) {
-        val mBluetoothManager = getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
-        val bluetoothGattServer = mBluetoothManager.openGattServer(
-                applicationContext,
-                bluetoothGattServerCallback
-        )
-        val service =
-                BluetoothGattService(uuids["uuidServer"], BluetoothGattService.SERVICE_TYPE_PRIMARY)
-        //add a read characteristic.
-        val characteristicRead = BluetoothGattCharacteristic(
-                uuids["uuidCharRead"],
-                BluetoothGattCharacteristic.PROPERTY_READ,
-                BluetoothGattCharacteristic.PERMISSION_READ
-        )
-        //add a descriptor
-        val descriptor =
-                BluetoothGattDescriptor(
-                        uuids["uuidDescriptor"],
-                        BluetoothGattCharacteristic.PERMISSION_WRITE
-                )
-        characteristicRead.addDescriptor(descriptor)
-        service.addCharacteristic(characteristicRead)
-        //add a write characteristic.
-        val characteristicWrite = BluetoothGattCharacteristic(
-                uuids["uuidCharWrite"],
-                BluetoothGattCharacteristic.PROPERTY_WRITE or
-                        BluetoothGattCharacteristic.PROPERTY_READ or
-                        BluetoothGattCharacteristic.PROPERTY_NOTIFY,
-                BluetoothGattCharacteristic.PERMISSION_WRITE
-        )
-        service.addCharacteristic(characteristicWrite)
-        Log.i("services", bluetoothGattServer.services.toString())
-        bluetoothGattServer.addService(service)
-        Log.i("GATT", "2. initServices ok")
-    }
-
-    // callback
-    private val bluetoothGattServerCallback: BluetoothGattServerCallback =
-            object : BluetoothGattServerCallback() {
-                override fun onConnectionStateChange(
-                        device: BluetoothDevice,
-                        status: Int,
-                        newState: Int
-                ) {
-                    Log.i(
-                            "GATT",
-                            "onConnectionStateChange：name = ${device.name}, address = ${device.address}"
-                    )
-                    Log.i(
-                            "GATT", "onConnectionStateChange：status $status, newState $newState ",
-                    )
-                    super.onConnectionStateChange(device, status, newState)
-                }
-
-                override fun onServiceAdded(status: Int, service: BluetoothGattService?) {
-                    super.onServiceAdded(status, service)
-                    Log.i("GATT", "onServiceAdded：status = $status")
-                }
-
-            }
 
     // go to other activity
     fun goWebView(url: String?, loading: Boolean = false) {
@@ -439,21 +381,21 @@ open class WebViewActivity : Activity() {
      */
     private val accessCode = 102
     private val permissions: Array<String> = arrayOf(
-            Manifest.permission.BLUETOOTH,
-            Manifest.permission.BLUETOOTH_ADMIN,
-            Manifest.permission.INTERNET,
-            Manifest.permission.READ_PHONE_STATE,
-            Manifest.permission.WRITE_EXTERNAL_STORAGE,
-            Manifest.permission.READ_EXTERNAL_STORAGE,
-            Manifest.permission.MOUNT_UNMOUNT_FILESYSTEMS,
-            Manifest.permission.RECEIVE_SMS,
-            Manifest.permission.ACCESS_NETWORK_STATE,
-            Manifest.permission.ACCESS_WIFI_STATE,
-            Manifest.permission.CHANGE_WIFI_STATE,
-            Manifest.permission.ACCESS_FINE_LOCATION,
-            Manifest.permission.ACCESS_COARSE_LOCATION,
-            Manifest.permission.CHANGE_NETWORK_STATE,
-            Manifest.permission.CAMERA
+        Manifest.permission.BLUETOOTH,
+        Manifest.permission.BLUETOOTH_ADMIN,
+        Manifest.permission.INTERNET,
+        Manifest.permission.READ_PHONE_STATE,
+        Manifest.permission.WRITE_EXTERNAL_STORAGE,
+        Manifest.permission.READ_EXTERNAL_STORAGE,
+        Manifest.permission.MOUNT_UNMOUNT_FILESYSTEMS,
+        Manifest.permission.RECEIVE_SMS,
+        Manifest.permission.ACCESS_NETWORK_STATE,
+        Manifest.permission.ACCESS_WIFI_STATE,
+        Manifest.permission.CHANGE_WIFI_STATE,
+        Manifest.permission.ACCESS_FINE_LOCATION,
+        Manifest.permission.ACCESS_COARSE_LOCATION,
+        Manifest.permission.CHANGE_NETWORK_STATE,
+        Manifest.permission.CAMERA
     )
     private var countRequest = 0
 
@@ -470,9 +412,9 @@ open class WebViewActivity : Activity() {
     }
 
     override fun onRequestPermissionsResult(
-            requestCode: Int,
-            permissions: Array<out String>,
-            grantResults: IntArray
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray
     ) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         // check permission of images picker
@@ -485,11 +427,11 @@ open class WebViewActivity : Activity() {
                 if (countRequest > 2) {
                     // ask User to grant permission manually
                     AlertDialog.Builder(this)
-                            .setMessage(R.string.open_permission_req)
-                            .setTitle(R.string.request)
-                            .setPositiveButton(R.string.confirm) { _, _ ->
-                                goIntentSetting()
-                            }.create().show()
+                        .setMessage(R.string.open_permission_req)
+                        .setTitle(R.string.request)
+                        .setPositiveButton(R.string.confirm) { _, _ ->
+                            goIntentSetting()
+                        }.create().show()
                 } else getPermission()
             }
         }
@@ -533,9 +475,9 @@ open class WebViewActivity : Activity() {
     }
 
     override fun onActivityResult(
-            requestCode: Int,
-            resultCode: Int,
-            data: Intent?
+        requestCode: Int,
+        resultCode: Int,
+        data: Intent?
     ) {
         super.onActivityResult(requestCode, resultCode, data)
         imagePicker.onActivityResult(this, requestCode, resultCode, data)
@@ -562,15 +504,15 @@ open class WebViewActivity : Activity() {
     // base64 to bitmap
     open fun base64ToBitmap(base64Data: String?): Bitmap? {
         val bytes =
-                Base64.decode(base64Data, Base64.DEFAULT)
+            Base64.decode(base64Data, Base64.DEFAULT)
         return BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
     }
 
     // 整理并向前端发送扫描到的设备
     fun getBleDeviceData(
-            device: BluetoothDevice,
-            rssi: Int,
-            serviceUuids: List<ParcelUuid>? = null
+        device: BluetoothDevice,
+        rssi: Int,
+        serviceUuids: List<ParcelUuid>? = null
     ): BleDeviceData? {
         // 过滤无名设备
         if (device.name == null) return null
@@ -589,13 +531,13 @@ open class WebViewActivity : Activity() {
             }
         }
         return BleDeviceData(
-                device.address,
-                device.name,
-                rssi,
-                device.type,
-                list,
-                device.bondState,
-                System.currentTimeMillis() / 1000
+            device.address,
+            device.name,
+            rssi,
+            device.type,
+            list,
+            device.bondState,
+            System.currentTimeMillis() / 1000
         )
     }
 
@@ -603,7 +545,7 @@ open class WebViewActivity : Activity() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
             val mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter()
             val bluetoothLeAdvertiser: BluetoothLeAdvertiser =
-                    mBluetoothAdapter.bluetoothLeAdvertiser
+                mBluetoothAdapter.bluetoothLeAdvertiser
             bluetoothLeAdvertiser.stopAdvertising(object : AdvertiseCallback() {})
         }
         mWebView?.destroy()

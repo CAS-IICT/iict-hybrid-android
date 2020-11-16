@@ -3,6 +3,8 @@ package cn.iict.virustrack
 import android.app.AlertDialog
 import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothDevice
+import android.bluetooth.le.AdvertiseCallback
+import android.bluetooth.le.AdvertiseSettings
 import android.bluetooth.le.ScanCallback
 import android.bluetooth.le.ScanResult
 import android.content.BroadcastReceiver
@@ -166,12 +168,15 @@ object Init {
             }
         })
 
+
+        // start BLE GATT service
         mWebView.registerHandler("setGATT", WVJBWebView.WVJBHandler<Any?, Any?> { data, function ->
             Log.i(tag, "js call set GATT")
             Log.i(tag, data.toString())
             val data = Gson().fromJson(data.toString(), GATTData::class.java)
             if (activity.checkBle()) {
                 val uuids = activity.setUuids()
+                // if there is uuid input, use the uuid input
                 data.message?.let {
                     uuids["uuidServer"] = UUID.fromString(it)
                     Log.i("uuidServer", uuids["uuidServer"].toString())
@@ -180,10 +185,39 @@ object Init {
                 val mac = activity.getBleMac()
                 val data2 = BleInfoData(name, mac, uuids) // 自己的蓝牙信息
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                    activity.initGATT(uuids)
-                    function.onResult(
-                        activity.json(1, data2, "GATT Ble broadcast server starts")
-                    )
+                    if (data.flag) {
+                        activity.startGATT(uuids, object : AdvertiseCallback() {
+                            override fun onStartSuccess(settingsInEffect: AdvertiseSettings?) {
+                                function.onResult(
+                                    activity.json(1, data2, "GATT succeed to start")
+                                )
+                                super.onStartSuccess(settingsInEffect)
+                            }
+
+                            override fun onStartFailure(errorCode: Int) {
+                                function.onResult(
+                                    activity.json(0, data2, "GATT fail to start, $errorCode")
+                                )
+                                super.onStartFailure(errorCode)
+                            }
+                        })
+                    } else {
+                        activity.stopGATT(object : AdvertiseCallback() {
+                            override fun onStartSuccess(settingsInEffect: AdvertiseSettings?) {
+                                function.onResult(
+                                    activity.json(1, data2, "GATT succeed to stop")
+                                )
+                                super.onStartSuccess(settingsInEffect)
+                            }
+
+                            override fun onStartFailure(errorCode: Int) {
+                                function.onResult(
+                                    activity.json(0, data2, "GATT fail to stop")
+                                )
+                                super.onStartFailure(errorCode)
+                            }
+                        })
+                    }
                 } else {
                     function.onResult(
                         activity.json(0, data2, "GATT broadcast fail to start, Android<5.1")
