@@ -33,20 +33,24 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.ParcelUuid
 import android.provider.Settings
-import android.support.annotation.RequiresApi
 import android.text.TextUtils
 import android.util.Base64
 import android.util.Log
 import android.view.Gravity
 import android.view.KeyEvent
 import android.view.View
-import android.webkit.*
 import android.widget.LinearLayout
 import android.widget.Toast
+import cn.ac.iict.webviewjsbridgex5.WVJBWebView
 import com.google.gson.Gson
 import com.linchaolong.android.imagepicker.ImagePicker
+import com.tencent.smtt.export.external.interfaces.WebResourceRequest
+import com.tencent.smtt.export.external.interfaces.WebResourceResponse
+import com.tencent.smtt.sdk.WebChromeClient
+import com.tencent.smtt.sdk.WebSettings
+import com.tencent.smtt.sdk.WebView
+import com.tencent.smtt.sdk.WebViewClient
 import net.vidageek.mirror.dsl.Mirror
-import wendu.webviewjavascriptbridge.WVJBWebView
 import java.io.ByteArrayOutputStream
 import java.io.IOException
 import java.net.NetworkInterface
@@ -58,7 +62,7 @@ import kotlin.collections.HashMap
 open class WebViewActivity : Activity() {
 
     //open var url = "http://192.168.1.79:8080"
-    open var url = "http://w1.iict.cn:8080" //前端
+    open var url = "http://192.168.2.5:8080" //前端
 
     open val tag: String = this.javaClass.simpleName
     private var loading: Boolean = false
@@ -94,7 +98,7 @@ open class WebViewActivity : Activity() {
         otherUrl?.let { url = it }
         Log.i(tag, "initWebView: $url")
         showLoading(loading)
-        val webSettings: WebSettings = mWebView.settings
+        val webSettings = mWebView.settings
 
         webSettings.setSupportZoom(false)
         webSettings.useWideViewPort = true
@@ -105,8 +109,6 @@ open class WebViewActivity : Activity() {
         webSettings.supportMultipleWindows()
         //允许访问文件
         webSettings.allowFileAccess = true
-        //开启javascript
-        webSettings.javaScriptEnabled = true
         //支持通过JS打开新窗口
         //webSettings.javaScriptCanOpenWindowsAutomatically = true
         //关闭webview中缓存
@@ -208,7 +210,7 @@ open class WebViewActivity : Activity() {
                 return res1.toString()
             }
         } catch (e: Exception) {
-            Log.i("error", e.message)
+            Log.i("error", e.message.toString())
         }
 
         return "02:00:00:00:00:00"
@@ -232,7 +234,7 @@ open class WebViewActivity : Activity() {
                 "02:00:00:00:00:00"
             }
         } catch (e: Exception) {
-            Log.i("BleMacError", e.message)
+            Log.i("BleMacError", e.message.toString())
             return "02:00:00:00:00:00"
         }
     }
@@ -248,7 +250,7 @@ open class WebViewActivity : Activity() {
                 list.add(uuid.toString())
             }
         } catch (e: Exception) {
-            Log.e("uuid_error", e.message)
+            Log.e("uuid_error", e.message.toString())
         }
         return list
     }
@@ -295,7 +297,7 @@ open class WebViewActivity : Activity() {
             .setConnectable(false)
             .setTimeout(0)
             .setAdvertiseMode(AdvertiseSettings.ADVERTISE_MODE_BALANCED)
-            .setTxPowerLevel(AdvertiseSettings.ADVERTISE_TX_POWER_ULTRA_LOW)
+            .setTxPowerLevel(AdvertiseSettings.ADVERTISE_TX_POWER_MEDIUM)
             .build()
         val advertiseData: AdvertiseData = AdvertiseData.Builder()
             .setIncludeDeviceName(true)
@@ -316,11 +318,10 @@ open class WebViewActivity : Activity() {
         )
     }
 
-    @RequiresApi(Build.VERSION_CODES.LOLLIPOP)
+    @TargetApi(Build.VERSION_CODES.LOLLIPOP)
     fun stopGATT(callback: AdvertiseCallback) {
         val mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter()
-        val bluetoothLeAdvertiser: BluetoothLeAdvertiser =
-            mBluetoothAdapter.bluetoothLeAdvertiser
+        val bluetoothLeAdvertiser: BluetoothLeAdvertiser = mBluetoothAdapter.bluetoothLeAdvertiser
         bluetoothLeAdvertiser.stopAdvertising(callback)
     }
 
@@ -496,7 +497,7 @@ open class WebViewActivity : Activity() {
             Log.i(tag, "path:$path, quality:$quality")
             String(Base64.encode(bytes, Base64.DEFAULT))
         } catch (e: IOException) {
-            Log.e(tag, e.message)
+            Log.e(tag, e.message.toString())
             null
         }
     }

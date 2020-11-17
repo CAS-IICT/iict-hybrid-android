@@ -11,6 +11,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.content.res.Resources
 import android.graphics.Color
 import android.net.Uri
 import android.net.wifi.WifiManager
@@ -19,6 +20,7 @@ import android.os.Handler
 import android.util.DisplayMetrics
 import android.util.Log
 import android.view.View
+import cn.ac.iict.webviewjsbridgex5.WVJBWebView
 import com.amap.api.location.AMapLocationClient
 import com.amap.api.location.AMapLocationClientOption
 import com.amap.api.services.weather.LocalWeatherForecastResult
@@ -29,14 +31,14 @@ import com.google.gson.Gson
 import com.linchaolong.android.imagepicker.ImagePicker
 import com.linchaolong.android.imagepicker.cropper.CropImage
 import com.linchaolong.android.imagepicker.cropper.CropImageView
-import wendu.webviewjavascriptbridge.WVJBWebView
 import java.util.*
 
+@Suppress("DEPRECATION")
 object Init {
-    open val tag: String = this.javaClass.simpleName
+    val tag: String = this.javaClass.simpleName
     private val handler = Handler()
 
-    open fun initBridge(mWebView: WVJBWebView, activity: WebViewActivity) {
+    fun initBridge(mWebView: WVJBWebView, activity: WebViewActivity) {
         Log.i(tag, "WebViewActivity: initBridge")
         // bacn
         mWebView.registerHandler("back", WVJBWebView.WVJBHandler<Any?, Any?> { _, function ->
@@ -83,6 +85,11 @@ object Init {
             WVJBWebView.WVJBHandler<Any?, Any?> { data, function ->
                 Log.i(tag, "js call set status bar")
                 Log.i(tag, data.toString())
+                val resources: Resources = activity.applicationContext.resources
+                val resourceId: Int =
+                    resources.getIdentifier("status_bar_height", "dimen", "android")
+                val height = resources.getDimensionPixelSize(resourceId)
+
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
                     val data = Gson().fromJson(data.toString(), StatusBarData::class.java)
                     // set background
@@ -101,7 +108,7 @@ object Init {
                     function.onResult(
                         activity.json(
                             1,
-                            null,
+                            height,
                             "set status bar successfully, color:${data.color}, bg:${data.background}"
                         )
                     )
@@ -110,7 +117,7 @@ object Init {
                     function.onResult(
                         activity.json(
                             0,
-                            null,
+                            height,
                             "Low Version, need more than Android 5.0"
                         )
                     )
@@ -302,7 +309,8 @@ object Init {
                                     val device =
                                         intent.getParcelableExtra<BluetoothDevice>(BluetoothDevice.EXTRA_DEVICE)
                                     val rssi = intent.getShortExtra(BluetoothDevice.EXTRA_RSSI, 0)
-                                    val returnData = activity.getBleDeviceData(device, rssi.toInt())
+                                    val returnData =
+                                        device?.let { activity.getBleDeviceData(it, rssi.toInt()) }
                                     returnData?.let {
                                         Log.i("onScanResult", it.toString())
                                         mWebView.callHandler(
@@ -310,7 +318,7 @@ object Init {
                                             activity.json(
                                                 1,
                                                 it,
-                                                "Scan Bluetooth device: ${device.name}"
+                                                "Scan Bluetooth device: ${it.name}"
                                             )
                                         )
                                     }

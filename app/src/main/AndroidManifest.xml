@@ -96,8 +96,7 @@
             android:screenOrientation="portrait" />
         <activity
             android:name="cn.iict.virustrack.MapActivity"
-            android:screenOrientation="portrait"
-            android:theme="@style/TranslucentTheme" />
+            android:screenOrientation="portrait" />
     </application>
 
 </manifest>

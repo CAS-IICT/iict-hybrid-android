@@ -22,9 +22,9 @@ import com.yc.pedometer.info.TemperatureInfo
 import com.yc.pedometer.listener.TemperatureListener
 import com.yc.pedometer.sdk.*
 import com.yc.pedometer.utils.GlobalVariable
-import wendu.webviewjavascriptbridge.WVJBWebView
-import wendu.webviewjavascriptbridge.WVJBWebView.WVJBHandler
-import wendu.webviewjavascriptbridge.WVJBWebView.WVJBResponseCallback
+import cn.ac.iict.webviewjsbridgex5.WVJBWebView
+import cn.ac.iict.webviewjsbridgex5.WVJBWebView.WVJBHandler
+import cn.ac.iict.webviewjsbridgex5.WVJBWebView.WVJBResponseCallback
 
 class MainActivity : WebViewActivity() {
     private var splashView: LinearLayout? = null

@@ -23,7 +23,7 @@
             android:text="Loading now" />
     </LinearLayout>
 
-    <wendu.webviewjavascriptbridge.WVJBWebView
+    <cn.ac.iict.webviewjsbridgex5.WVJBWebView
         android:id="@+id/webview"
         android:layout_width="match_parent"
         android:layout_height="match_parent">
@@ -45,6 +45,6 @@
                 app:indicatorName="BallPulseIndicator" />
         </LinearLayout>
 
-    </wendu.webviewjavascriptbridge.WVJBWebView>
+    </cn.ac.iict.webviewjsbridgex5.WVJBWebView>
 
 </LinearLayout>

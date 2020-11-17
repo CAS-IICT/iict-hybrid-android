@@ -20,7 +20,7 @@ import com.amap.api.maps.model.MarkerOptions
 import com.amap.api.maps.model.MyLocationStyle
 import com.google.gson.Gson
 import pl.droidsonroids.gif.GifImageView
-import wendu.webviewjavascriptbridge.WVJBWebView
+import cn.ac.iict.webviewjsbridgex5.WVJBWebView
 
 
 class MapActivity : WebViewActivity(), LocationSource, AMapLocationListener {
@@ -162,7 +162,7 @@ class MapActivity : WebViewActivity(), LocationSource, AMapLocationListener {
         mMapView?.onPause()
     }
 
-    override fun onSaveInstanceState(outState: Bundle?) {
+    override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
         //在activity执行onSaveInstanceState时执行mMapView.onSaveInstanceState (outState)，保存地图当前的状态
         mMapView?.onSaveInstanceState(outState)

@@ -7,7 +7,7 @@
     android:orientation="vertical"
     tools:context="cn.iict.virustrack.MapActivity">
 
-    <wendu.webviewjavascriptbridge.WVJBWebView
+    <cn.ac.iict.webviewjsbridgex5.WVJBWebView
         android:id="@+id/webview"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
@@ -30,7 +30,7 @@
                 app:indicatorName="BallPulseIndicator" />
         </LinearLayout>
 
-    </wendu.webviewjavascriptbridge.WVJBWebView>
+    </cn.ac.iict.webviewjsbridgex5.WVJBWebView>
 
     <RelativeLayout
         android:id="@+id/view_map"
