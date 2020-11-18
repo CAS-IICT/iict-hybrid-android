@@ -44,6 +44,7 @@ import android.widget.Toast
 import cn.ac.iict.webviewjsbridgex5.WVJBWebView
 import com.google.gson.Gson
 import com.linchaolong.android.imagepicker.ImagePicker
+import com.tencent.smtt.export.external.interfaces.WebResourceError
 import com.tencent.smtt.export.external.interfaces.WebResourceRequest
 import com.tencent.smtt.export.external.interfaces.WebResourceResponse
 import com.tencent.smtt.sdk.WebChromeClient
@@ -63,6 +64,8 @@ open class WebViewActivity : Activity() {
 
     //open var url = "http://192.168.1.79:8080"
     open var url = "http://192.168.2.5:8080" //前端
+    // a flag to sign if first page has loaded successfully
+    private var loaded = false
 
     open val tag: String = this.javaClass.simpleName
     private var loading: Boolean = false
@@ -113,7 +116,7 @@ open class WebViewActivity : Activity() {
         //webSettings.javaScriptCanOpenWindowsAutomatically = true
         //关闭webview中缓存
         webSettings.setAppCacheEnabled(true)
-        webSettings.cacheMode = WebSettings.LOAD_NO_CACHE
+        webSettings.cacheMode = WebSettings.LOAD_DEFAULT
         webSettings.domStorageEnabled = true //DOM Storage
 
         mWebView.overScrollMode = WVJBWebView.OVER_SCROLL_NEVER // 取消WebView中滚动或拖动到顶部、底部时的阴影
@@ -133,8 +136,21 @@ open class WebViewActivity : Activity() {
         mWebView.webViewClient = object : WebViewClient() {
             override fun onPageFinished(view: WebView?, url: String?) {
                 Log.i(tag, "Webview finish loading: $url")
-                super.onPageFinished(view, url)
+                // mark loaded successfully
+                loaded = true
                 onLoadFinish()
+                super.onPageFinished(view, url)
+            }
+
+            override fun onReceivedError(
+                p0: WebView?,
+                p1: WebResourceRequest?,
+                p2: WebResourceError?
+            ) {
+                Log.i(tag, "onReceivedError")
+                onLoadError()
+                if(!loaded) p0?.loadUrl("file:///android_asset/error.html")
+                super.onReceivedError(p0, p1, p2)
             }
 
             override fun onReceivedHttpError(
@@ -144,28 +160,7 @@ open class WebViewActivity : Activity() {
             ) {
                 Log.i(tag, "onReceivedHttpError")
                 super.onReceivedHttpError(view, request, errorResponse)
-                //onLoadError()
             }
-        }
-
-        // deal with error page for android < 6.0 mash
-        mWebView.webChromeClient = object : WebChromeClient() {
-            override fun onReceivedTitle(view: WebView, title: String) {
-                super.onReceivedTitle(view, title)
-                if (title.contains("404")
-                    || title.contains("找不到")
-                    || title.contains("Error")
-                    || title.contains("500")
-                    || title.contains("无法打开")
-                    || title.contains("not available")
-                    || title.contains("not found")
-                ) {
-                    Log.w(tag, "404 error")
-                    view.loadUrl("file:///android_asset/error.html")
-                    onLoadError()
-                }
-            }
-
         }
         mWebView.loadUrl(url)
     }
@@ -183,6 +178,7 @@ open class WebViewActivity : Activity() {
         mWebView?.registerHandler(
             "refreshErrorPage",
             WVJBWebView.WVJBHandler<Any?, Any?> { _, function ->
+                Log.i(tag, "js call refreshErrorPage: $url")
                 function.onResult(json(1, url, "refresh the error page"))
             })
         showLoading(false)
@@ -543,12 +539,8 @@ open class WebViewActivity : Activity() {
     }
 
     override fun onDestroy() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            val mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter()
-            val bluetoothLeAdvertiser: BluetoothLeAdvertiser =
-                mBluetoothAdapter.bluetoothLeAdvertiser
-            bluetoothLeAdvertiser.stopAdvertising(object : AdvertiseCallback() {})
-        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP)
+            stopGATT(object : AdvertiseCallback() {})
         mWebView?.destroy()
         super.onDestroy()
     }

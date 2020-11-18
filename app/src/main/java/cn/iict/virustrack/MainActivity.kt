@@ -43,6 +43,9 @@ class MainActivity : WebViewActivity() {
     override val tag = this.javaClass.simpleName
     private val handler = Handler()
 
+    // autoose splash
+    private val closeSplash = true
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         mWebView?.let {
@@ -342,6 +345,22 @@ class MainActivity : WebViewActivity() {
         // 设置连接后各种手环回调
         registerCallback(mWebView)
 
+        mWebView.registerHandler("splash", WVJBHandler<Any?, Any?> { data, function ->
+            Log.i(tag, "js call splash")
+            Log.i(tag, data.toString())
+            val data = Gson().fromJson(data.toString(), SwitchData::class.java)
+            if (!data.flag) {
+                splashView?.let {
+                    Animation.fadeOut(it as View, data.delay)
+                }
+            } else {
+                splashView?.let {
+                    Animation.fadeIn(it as View, data.delay)
+                }
+            }
+            function.onResult(json(1, null, "Splash: flag:${data.flag}; delay:${data.delay}"))
+        })
+
         // 扫描手环
         mWebView.registerHandler("scanBand", WVJBHandler<Any?, Any?> { data, function ->
             Log.i(tag, "js call scan band")
@@ -507,7 +526,7 @@ class MainActivity : WebViewActivity() {
             if (check(function, true)) {
                 mWriteCommand?.let {
                     mWebView.callHandler("BandLock")
-                    if (data.flag!!) it.sendRateTestCommand(GlobalVariable.RATE_TEST_START)
+                    if (data.flag) it.sendRateTestCommand(GlobalVariable.RATE_TEST_START)
                     else it.sendRateTestCommand(GlobalVariable.RATE_TEST_STOP)
                     function.onResult(json(1, null, "test rate data ${data.flag}"))
                 }
@@ -532,7 +551,7 @@ class MainActivity : WebViewActivity() {
             val data = Gson().fromJson(data.toString(), SwitchData::class.java)
             if (check(function, true)) {
                 mWriteCommand?.let {
-                    if (data.flag!!) it.sendBloodPressureTestCommand(GlobalVariable.BLOOD_PRESSURE_TEST_START)
+                    if (data.flag) it.sendBloodPressureTestCommand(GlobalVariable.BLOOD_PRESSURE_TEST_START)
                     else it.sendBloodPressureTestCommand(GlobalVariable.BLOOD_PRESSURE_TEST_STOP)
                     function.onResult(json(1, null, "test blood pressure ${data.flag}"))
                 }
@@ -556,15 +575,9 @@ class MainActivity : WebViewActivity() {
             val data = Gson().fromJson(data.toString(), SwitchData::class.java)
             if (check(function, true)) {
                 mWriteCommand?.let {
-                    if (data.flag == null) { //null时查询
-                        Log.i(tag, "get temp status")
-                        it.queryRawTemperatureStatus()
-                        function.onResult(json(1, null, "query raw temperature status"))
-                    } else {
-                        Log.i(tag, "set temp status")
-                        it.setRawTemperatureStatus(data.flag)
-                        function.onResult(json(1, null, "set raw temperature status, ${data.flag}"))
-                    }
+                    Log.i(tag, "set temp status")
+                    it.setRawTemperatureStatus(data.flag)
+                    function.onResult(json(1, null, "set raw temperature status, ${data.flag}"))
                 }
             }
         })
@@ -687,7 +700,7 @@ class MainActivity : WebViewActivity() {
                         val i = it.queryBloodPressureOneDayInfo(data.date)
                         val data = ArrayList<BloodPressureData>()
                         for (v in i) {
-                            Log.i("blood",v.bloodPressureTime.toString())
+                            Log.i("blood", v.bloodPressureTime.toString())
                             data.add(BloodPressureData(v.hightBloodPressure, v.lowBloodPressure, 0))
                         }
                         function.onResult(json(1, data, "blood pressure date data"))
@@ -768,10 +781,13 @@ class MainActivity : WebViewActivity() {
         return true
     }
 
+
     override fun onLoadFinish() {
         super.onLoadFinish()
-        splashView?.let {
-            Animation.fadeOut(it as View, 1000)
+        if (closeSplash) {
+            splashView?.let {
+                Animation.fadeOut(it as View, 1000)
+            }
         }
     }
 

@@ -28,4 +28,24 @@ object Animation {
         })
         view.startAnimation(animation)
     }
+    fun fadeIn(view: View, duration: Long = 500) {
+        if (view.visibility == View.VISIBLE) return
+        view.isEnabled = false
+        val animation = AlphaAnimation(0f, 1f)
+        animation.duration = duration
+        animation.interpolator = AccelerateInterpolator()
+        animation.fillAfter = true
+        animation.setAnimationListener(object : Animation.AnimationListener {
+            override fun onAnimationRepeat(animation: Animation?) {
+            }
+
+            override fun onAnimationStart(animation: Animation?) {
+            }
+
+            override fun onAnimationEnd(animation: Animation?) {
+                view.visibility = View.VISIBLE
+            }
+        })
+        view.startAnimation(animation)
+    }
 }

@@ -214,5 +214,6 @@ data class BandDateData(
 
 // 开关类，只有一个参数，只有true或者false
 data class SwitchData(
-    val flag: Boolean?
+    val flag: Boolean = true,
+    val delay: Long = 1000
 )

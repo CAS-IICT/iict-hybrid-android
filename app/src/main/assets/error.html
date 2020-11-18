@@ -30,8 +30,7 @@
                     )
                 }
                 setTimeout(() => {
-                    if (!window.WebViewJavascriptBridge)
-                        console.error('Not native environment available, fail to init JSBridge')
+                    if (!window.WebViewJavascriptBridge) alert('Not native environment available, fail to init JSBridge')
                 }, 3000)
             }
             window.onload = function () {
