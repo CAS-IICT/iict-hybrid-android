@@ -16,7 +16,6 @@ import android.graphics.Color
 import android.net.Uri
 import android.net.wifi.WifiManager
 import android.os.Build
-import android.os.Handler
 import android.util.DisplayMetrics
 import android.util.Log
 import android.view.View
@@ -31,12 +30,14 @@ import com.google.gson.Gson
 import com.linchaolong.android.imagepicker.ImagePicker
 import com.linchaolong.android.imagepicker.cropper.CropImage
 import com.linchaolong.android.imagepicker.cropper.CropImageView
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.delay
 import java.util.*
 
-@Suppress("DEPRECATION")
 object Init {
     val tag: String = this.javaClass.simpleName
-    private val handler = Handler()
 
     fun initBridge(mWebView: WVJBWebView, activity: WebViewActivity) {
         Log.i(tag, "WebViewActivity: initBridge")
@@ -234,8 +235,6 @@ object Init {
                 function.onResult(
                     activity.json(0, null, "Bluetooth is not available, please turn on Bluetooth")
                 )
-                val blueAdapter = BluetoothAdapter.getDefaultAdapter()
-                blueAdapter.enable()
             }
         })
 
@@ -261,13 +260,13 @@ object Init {
                                 val serviceUuids = it.scanRecord?.serviceUuids
                                 val returnData =
                                     activity.getBleDeviceData(device, it.rssi, serviceUuids)
-                                returnData?.let {
-                                    Log.i("onScanResult", it.toString())
+                                returnData?.let { it2 ->
+                                    Log.i("onScanResult", it2.toString())
                                     mWebView.callHandler(
                                         "OnBleScanResult",
                                         activity.json(
                                             1,
-                                            it,
+                                            it2,
                                             "Scan Bluetooth device: ${device.name}"
                                         )
                                     )
@@ -288,16 +287,17 @@ object Init {
                     Log.i(tag, "start low power Ble scan for ${data.time / 1000}s")
                     scanner.startScan(scanLowCallback)
                     // 已经开始扫描，低功耗蓝牙
-                    function.onResult(activity.json(1, null, "Start scan Ble in low power"))
-                    // 定时关闭蓝牙扫描
-                    handler.postDelayed({
+                    function.onResult(activity.json(1, null, "Start scan Ble (Low Power)"))
+                    // delay to stop
+                    GlobalScope.launch {
+                        delay(data.time)
                         scanner.stopScan(scanLowCallback)
                         Log.i(tag, "stop scan Ble")
                         mWebView.callHandler(
                             "OnBleFinishScan",
-                            activity.json(1, null, "Finish Scan")
+                            activity.json(1, null, "Finish Scan (Low Power Mode)")
                         )
-                    }, data.time)
+                    }
                 } else {
                     // 传统蓝牙扫描的回调
                     val scanCallback = object : BroadcastReceiver() {
@@ -330,7 +330,7 @@ object Init {
                                     Log.i("BleScan", "Finish Discovery")
                                     mWebView.callHandler(
                                         "OnBleFinishScan",
-                                        activity.json(1, null, "Finish Discovery")
+                                        activity.json(1, null, "Finish Scan (Traditional)")
                                     )
                                 }
                                 action.equals(
@@ -339,7 +339,7 @@ object Init {
                                     Log.i("BleScan", "Start Discovery")
                                     // 已经开始扫描，普通蓝牙
                                     function.onResult(
-                                        activity.json(1, null, "Start scan Ble in all")
+                                        activity.json(1, null, "Start scan Ble (Traditional)")
                                     )
                                 }
                             }
@@ -352,11 +352,26 @@ object Init {
                     filter.addAction(BluetoothAdapter.ACTION_DISCOVERY_FINISHED)
                     filter.addAction(BluetoothAdapter.ACTION_DISCOVERY_STARTED)
                     activity.registerReceiver(scanCallback, filter)
+                    Log.i(tag, "start traditional Ble discovery for ${data.time / 1000}s")
                     scanner.startDiscovery()
+                    // delay to stop
+                    GlobalScope.launch {
+                        delay(data.time)
+                        Log.i(tag, "stop discovery Ble")
+                        scanner.cancelDiscovery()
+                        mWebView.callHandler(
+                            "OnBleFinishScan",
+                            activity.json(1, null, "Finish Scan (Traditional)")
+                        )
+                    }
                 }
             } else {
                 function.onResult(
-                    activity.json(0, null, "Bluetooth is not available, please turn on Bluetooth")
+                    activity.json(
+                        0,
+                        null,
+                        "Bluetooth is not available, please check Bluetooth status"
+                    )
                 )
             }
         })
