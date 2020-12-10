@@ -119,6 +119,12 @@ data class WinSizeData(
     val height: Int = 0
 )
 
+data class NavBarData(
+    val height: Int = 0,
+    val show: Boolean = false,
+    val indicator: Boolean = false
+)
+
 //体温
 data class BandTemperatureData(
     val type: Int,

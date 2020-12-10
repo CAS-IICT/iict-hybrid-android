@@ -25,6 +25,9 @@ import com.yc.pedometer.utils.GlobalVariable
 import cn.ac.iict.webviewjsbridgex5.WVJBWebView
 import cn.ac.iict.webviewjsbridgex5.WVJBWebView.WVJBHandler
 import cn.ac.iict.webviewjsbridgex5.WVJBWebView.WVJBResponseCallback
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 class MainActivity : WebViewActivity() {
     private var splashView: LinearLayout? = null
@@ -41,7 +44,6 @@ class MainActivity : WebViewActivity() {
 
     override val content = R.layout.activity_main
     override val tag = this.javaClass.simpleName
-    private val handler = Handler()
 
     // autoose splash
     private val closeSplash = true
@@ -375,11 +377,12 @@ class MainActivity : WebViewActivity() {
                     it.stopLeScan() //先关闭原来的扫描，不重复扫描
                     it.startLeScan()
                     // 定时关闭蓝牙扫描
-                    handler.postDelayed({
+                    GlobalScope.launch {
+                        delay(data.time)
                         Log.i(tag, "stop scan band")
                         it.stopLeScan()
                         mWebView.callHandler("OnBandScanFinish", json(1, null, "Finish Scan"))
-                    }, data.time)
+                    }
 
                     function.onResult(json(1, null, "start scan the bands"))
                 }

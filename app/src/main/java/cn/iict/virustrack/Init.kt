@@ -1,6 +1,7 @@
 package cn.iict.virustrack
 
 import android.app.AlertDialog
+import android.app.Application
 import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothDevice
 import android.bluetooth.le.AdvertiseCallback
@@ -30,10 +31,9 @@ import com.google.gson.Gson
 import com.linchaolong.android.imagepicker.ImagePicker
 import com.linchaolong.android.imagepicker.cropper.CropImage
 import com.linchaolong.android.imagepicker.cropper.CropImageView
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import java.util.*
 
 object Init {
@@ -134,6 +134,7 @@ object Init {
         })
         // 获取手机屏幕大小
         mWebView.registerHandler("getWinSize", WVJBWebView.WVJBHandler<Any?, Any?> { _, function ->
+            Log.i(tag, "js call get win size")
             val manager = activity.windowManager
             val outMetrics = DisplayMetrics()
             manager.defaultDisplay.getMetrics(outMetrics)
@@ -142,6 +143,24 @@ object Init {
             val data = WinSizeData(width, height)
             function.onResult(activity.json(1, data, "get window size"))
         })
+        // get bottom navbar info
+        mWebView.registerHandler(
+            "getNavBarSize",
+            WVJBWebView.WVJBHandler<Any?, Any?> { _, function ->
+                Log.i(tag, "js call get nav bar size")
+                val ctx = activity.applicationContext
+                function.onResult(
+                    activity.json(
+                        1,
+                        NavBarData(
+                            NavUtil.getNavigationBarHeight(ctx),
+                            NavUtil.hasNavigationBar(ctx),
+                            NavUtil.hasBottomIndicator(ctx)
+                        ),
+                        "get nav bar size"
+                    )
+                )
+            })
         // get local uuid
         mWebView.registerHandler(
             "getLocalUuid",
@@ -169,11 +188,33 @@ object Init {
             Log.i(tag, "js call turn on Ble")
             val blueAdapter = BluetoothAdapter.getDefaultAdapter()
             if (blueAdapter != null) {
-                blueAdapter.enable()
-                function.onResult(activity.json(1, null, "Ble is enabled"))
-            } else {
-                function.onResult(activity.json(0, null, "Fail to turn on, no ble"))
-            }
+                if (blueAdapter.isEnabled)
+                    function.onResult(activity.json(1, null, "Ble is on"))
+                else {
+                    blueAdapter.enable()
+                    val filter = IntentFilter(BluetoothAdapter.ACTION_STATE_CHANGED)
+                    val bleOpenCallback = object : BroadcastReceiver() {
+                        override fun onReceive(context: Context?, intent: Intent) {
+                            val action = intent.action
+                            if (action.equals(BluetoothAdapter.ACTION_STATE_CHANGED)) {
+                                val action = intent.getIntExtra(
+                                    BluetoothAdapter.EXTRA_STATE,
+                                    BluetoothAdapter.ERROR
+                                )
+                                when (action) {
+                                    BluetoothAdapter.STATE_OFF -> function.onResult(
+                                        activity.json(0, null, "Ble is off")
+                                    )
+                                    BluetoothAdapter.STATE_ON -> function.onResult(
+                                        activity.json(1, null, "Ble is on")
+                                    )
+                                }
+                            }
+                        }
+                    }
+                    activity.registerReceiver(bleOpenCallback, filter)
+                }
+            } else function.onResult(activity.json(0, null, "Fail to turn on, no ble adapter"))
         })
 
 

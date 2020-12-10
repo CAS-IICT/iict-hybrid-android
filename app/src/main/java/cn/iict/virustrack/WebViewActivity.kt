@@ -51,6 +51,9 @@ import com.tencent.smtt.sdk.WebChromeClient
 import com.tencent.smtt.sdk.WebSettings
 import com.tencent.smtt.sdk.WebView
 import com.tencent.smtt.sdk.WebViewClient
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import net.vidageek.mirror.dsl.Mirror
 import java.io.ByteArrayOutputStream
 import java.io.IOException
@@ -62,8 +65,10 @@ import kotlin.collections.HashMap
 
 open class WebViewActivity : Activity() {
 
-    //open var url = "http://192.168.1.79:8080"
-    open var url = "http://192.168.2.5:8080" //前端
+    //open var url = "https://app.virus.iict.ac.cn" // formal server
+
+    open var url = "http://w1.iict.cn:8080" // test server
+
     // a flag to sign if first page has loaded successfully
     private var loaded = false
 
@@ -72,7 +77,6 @@ open class WebViewActivity : Activity() {
     open val content: Int = R.layout.activity_webview // overridable
     open var mWebView: WVJBWebView? = null
 
-    private val handler = Handler()
     val imagePicker: ImagePicker = ImagePicker()
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -110,6 +114,7 @@ open class WebViewActivity : Activity() {
         webSettings.loadsImagesAutomatically = true
         //多窗口
         webSettings.supportMultipleWindows()
+        webSettings.setAllowFileAccessFromFileURLs(true)
         //允许访问文件
         webSettings.allowFileAccess = true
         //支持通过JS打开新窗口
@@ -149,7 +154,7 @@ open class WebViewActivity : Activity() {
             ) {
                 Log.i(tag, "onReceivedError")
                 onLoadError()
-                if(!loaded) p0?.loadUrl("file:///android_asset/error.html")
+                if (!loaded) p0?.loadUrl("file:///android_asset/error.html")
                 super.onReceivedError(p0, p1, p2)
             }
 
@@ -162,6 +167,26 @@ open class WebViewActivity : Activity() {
                 super.onReceivedHttpError(view, request, errorResponse)
             }
         }
+        // deal with error page for android < 6.0 mash
+        mWebView.webChromeClient = object : WebChromeClient() {
+            override fun onReceivedTitle(view: WebView, title: String) {
+                Log.i(tag, "$title")
+                if (title.contains("404")
+                    || title.contains("找不到")
+                    || title.contains("Error")
+                    || title.contains("500")
+                    || title.contains("无法打开")
+                    || title.contains("not available")
+                    || title.contains("not found")
+                ) {
+                    super.onReceivedTitle(view, title)
+                    view.loadUrl("file:///android_asset/error.html")
+                    onLoadError()
+                }
+            }
+
+        }
+
         mWebView.loadUrl(url)
     }
 
@@ -366,7 +391,10 @@ open class WebViewActivity : Activity() {
     private fun exit() {
         if (isExit < 2 && tag == "MainActivity") {
             Toast.makeText(applicationContext, R.string.exit, Toast.LENGTH_SHORT).show()
-            handler.postDelayed({ isExit-- }, 2000L)
+            GlobalScope.launch {
+                delay(2000L)
+                isExit--
+            }
         } else {
             // 连续按两次切回后台
             moveTaskToBack(true)
@@ -382,10 +410,6 @@ open class WebViewActivity : Activity() {
         Manifest.permission.BLUETOOTH_ADMIN,
         Manifest.permission.INTERNET,
         Manifest.permission.READ_PHONE_STATE,
-        Manifest.permission.WRITE_EXTERNAL_STORAGE,
-        Manifest.permission.READ_EXTERNAL_STORAGE,
-        Manifest.permission.MOUNT_UNMOUNT_FILESYSTEMS,
-        Manifest.permission.RECEIVE_SMS,
         Manifest.permission.ACCESS_NETWORK_STATE,
         Manifest.permission.ACCESS_WIFI_STATE,
         Manifest.permission.CHANGE_WIFI_STATE,
