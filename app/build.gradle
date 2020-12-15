@@ -28,7 +28,7 @@ android {
 
     signingConfigs {
         signinfo {
-            keyAlias 'key0'
+            keyAlias 'iict_virustrack'
             keyPassword '123456'
             storeFile file('./src/main/assets/virustrack.jks')
             storePassword '123456'

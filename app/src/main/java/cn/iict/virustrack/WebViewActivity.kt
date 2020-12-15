@@ -65,9 +65,9 @@ import kotlin.collections.HashMap
 
 open class WebViewActivity : Activity() {
 
-    //open var url = "https://app.virus.iict.ac.cn" // formal server
+    open var url = "https://app.virus.iict.ac.cn" // formal server
 
-    open var url = "http://w1.iict.cn:8080" // test server
+    //open var url = "http://w1.iict.cn:8080" // test server
 
     // a flag to sign if first page has loaded successfully
     private var loaded = false
@@ -121,7 +121,7 @@ open class WebViewActivity : Activity() {
         //webSettings.javaScriptCanOpenWindowsAutomatically = true
         //关闭webview中缓存
         webSettings.setAppCacheEnabled(true)
-        webSettings.cacheMode = WebSettings.LOAD_DEFAULT
+        webSettings.cacheMode = WebSettings.LOAD_NO_CACHE
         webSettings.domStorageEnabled = true //DOM Storage
 
         mWebView.overScrollMode = WVJBWebView.OVER_SCROLL_NEVER // 取消WebView中滚动或拖动到顶部、底部时的阴影
