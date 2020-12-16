@@ -1,7 +1,6 @@
 package cn.iict.virustrack
 
 import android.app.AlertDialog
-import android.app.Application
 import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothDevice
 import android.bluetooth.le.AdvertiseCallback
@@ -28,6 +27,7 @@ import com.amap.api.services.weather.LocalWeatherLiveResult
 import com.amap.api.services.weather.WeatherSearch
 import com.amap.api.services.weather.WeatherSearchQuery
 import com.google.gson.Gson
+import com.hailong.appupdate.AppUpdateManager
 import com.linchaolong.android.imagepicker.ImagePicker
 import com.linchaolong.android.imagepicker.cropper.CropImage
 import com.linchaolong.android.imagepicker.cropper.CropImageView
@@ -596,6 +596,33 @@ object Init {
                 Log.i(tag, "js call get mac address")
                 val mac = Mac(activity.getBleMac(), activity.getWifiMac())
                 function.onResult(activity.json(1, mac, "Mac Got"))
+            })
+
+        mWebView.registerHandler(
+            "getVersion",
+            WVJBWebView.WVJBHandler<Any?, Any?> { _, function ->
+                Log.i(tag, "js call get version")
+                val version =
+                    activity.packageManager.getPackageInfo(activity.packageName, 0).versionName
+                var vnum = activity.packageManager.getPackageInfo(activity.packageName, 0).versionCode.toLong()
+                val data = VersionData(version, vnum)
+                function.onResult(activity.json(1, data, "android version"))
+            })
+        mWebView.registerHandler(
+            "updateApp",
+            WVJBWebView.WVJBHandler<Any?, Any?> { data, function ->
+                Log.i(tag, "js call update app")
+                val data = Gson().fromJson(data.toString(), AppData::class.java)
+
+                Log.i(tag, data.toString())
+                val builder = AppUpdateManager.Builder(activity)
+                builder.apkUrl(data.url)
+                    .updateContent(data.description)
+                    .confirmBgColor(Color.parseColor(data.confirmColor))
+                    .cancelBgColor(Color.parseColor(data.cancelColor))
+                    .build()
+
+                function.onResult(activity.json(1, null, "update diaglog opened"))
             })
     }
 }

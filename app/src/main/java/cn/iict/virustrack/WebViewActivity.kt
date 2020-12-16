@@ -65,9 +65,9 @@ import kotlin.collections.HashMap
 
 open class WebViewActivity : Activity() {
 
-    open var url = "https://app.virus.iict.ac.cn" // formal server
+    //open var url = "https://app.virus.iict.ac.cn" // formal server
 
-    //open var url = "http://w1.iict.cn:8080" // test server
+    open var url = "http://w1.iict.cn:8080" // test server
 
     // a flag to sign if first page has loaded successfully
     private var loaded = false

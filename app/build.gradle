@@ -68,5 +68,5 @@ dependencies {
     implementation 'com.amap.api:search:7.7.0'
     implementation 'com.amap.api:location:5.2.0'
     implementation 'net.vidageek:mirror:1.6.1'
-
+    implementation 'com.github.ZuoHailong:AppUpdate:0.2.6'
 }

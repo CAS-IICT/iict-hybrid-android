@@ -223,3 +223,19 @@ data class SwitchData(
     val flag: Boolean = true,
     val delay: Long = 1000
 )
+
+data class AppData(
+    val version: String = "",
+    val vnum: Int = 0,
+    val createtime: Int = 0,
+    val description: Array<String>,
+    val url: String = "",
+    val type: Int = 1,
+    val confirmColor: String? = "#2196f3",
+    val cancelColor: String? = "##b1b1b1"
+)
+
+data class VersionData(
+    val version: String,
+    val vnum: Long
+)
