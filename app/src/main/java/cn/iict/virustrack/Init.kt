@@ -476,8 +476,7 @@ object Init {
             }
         })
         // get weather info
-        mWebView.registerHandler(
-            "weatherInfo",
+        mWebView.registerHandler("weatherInfo",
             WVJBWebView.WVJBHandler<Any?, Any?> { data, function ->
                 Log.i(tag, "js call get weather info")
                 Log.i(tag, data.toString())
@@ -581,8 +580,8 @@ object Init {
                 }
             })
         })
-        mWebView.registerHandler(
-            "openMapActivity",
+
+        mWebView.registerHandler("openMapActivity",
             WVJBWebView.WVJBHandler<Any?, Any?> { data, function ->
                 Log.i(tag, "js call get cropper img")
                 Log.i(tag, data.toString())
@@ -590,26 +589,28 @@ object Init {
                 activity.goMap(data.path)
                 function.onResult(activity.json(1, null, "map opened"))
             })
-        mWebView.registerHandler(
-            "getMac",
+
+        mWebView.registerHandler("getMac",
             WVJBWebView.WVJBHandler<Any?, Any?> { _, function ->
                 Log.i(tag, "js call get mac address")
                 val mac = Mac(activity.getBleMac(), activity.getWifiMac())
                 function.onResult(activity.json(1, mac, "Mac Got"))
             })
 
-        mWebView.registerHandler(
-            "getVersion",
+        mWebView.registerHandler("getVersion",
             WVJBWebView.WVJBHandler<Any?, Any?> { _, function ->
                 Log.i(tag, "js call get version")
                 val version =
                     activity.packageManager.getPackageInfo(activity.packageName, 0).versionName
-                var vnum = activity.packageManager.getPackageInfo(activity.packageName, 0).versionCode.toLong()
+                var vnum = activity.packageManager.getPackageInfo(
+                    activity.packageName,
+                    0
+                ).versionCode.toLong()
                 val data = VersionData(version, vnum)
                 function.onResult(activity.json(1, data, "android version"))
             })
-        mWebView.registerHandler(
-            "updateApp",
+
+        mWebView.registerHandler("updateApp",
             WVJBWebView.WVJBHandler<Any?, Any?> { data, function ->
                 Log.i(tag, "js call update app")
                 val data = Gson().fromJson(data.toString(), AppData::class.java)
