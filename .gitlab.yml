@@ -1,0 +1,31 @@
+variables:
+    GRADLE_OPTS: '-Dorg.gradle.daemon=false' # 禁用 gradle 守护进程
+
+before_script:
+    - export GRADLE_USER_HOME=/cache/.gradle
+    - chmod +x ./gradlew
+
+stages:
+    - build
+    - deploy
+
+# 提交代码自动编译
+build:
+    image: gitlab-ci-android:V2 # 用来编译 android 项目的镜像
+    stage: build
+    script:
+        - ./gradlew assembleRelease
+    only:
+        - master
+    artifacts:
+        paths:
+            - app/build/outputs/apk/release/
+
+# 上传至服务器
+deploy:
+    image: takkatakka/lftp
+    stage: deploy
+    only:
+        - master
+    script:
+        - bash ./deploy.sh

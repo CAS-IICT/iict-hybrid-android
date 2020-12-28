@@ -32,7 +32,7 @@ class MapActivity : WebViewActivity(), LocationSource, AMapLocationListener {
     private var mListener: LocationSource.OnLocationChangedListener? = null
     private var mLocationClient: AMapLocationClient? = null
     override val content = R.layout.activity_map
-    override val tag = this.javaClass.simpleName
+    override val TAG: String = this.javaClass.simpleName
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -50,18 +50,18 @@ class MapActivity : WebViewActivity(), LocationSource, AMapLocationListener {
     // 继承并注册更多bridge functions
     override fun initBridge(mWebView: WVJBWebView) {
         super.initBridge(mWebView)
-        Log.i(tag, "MapActivity: initBridge")
+        Log.i(TAG, "MapActivity: initBridge")
         // zoom map camera size
         mWebView.registerHandler("zoomMap", WVJBWebView.WVJBHandler<Any?, Any?> { data, function ->
-            Log.i(tag, "js call zoom map")
-            Log.i(tag, data.toString())
+            Log.i(TAG, "js call zoom map")
+            Log.i(TAG, data.toString())
             val data = Gson().fromJson(data.toString(), MapZoomData::class.java)
             aMap?.moveCamera(CameraUpdateFactory.zoomTo(data.size))
             function.onResult(json(1, null, "success to zoom map to ${data.size}"))
         })
         // move the camera to the center of myself, blue point
         mWebView.registerHandler("moveCenter", WVJBWebView.WVJBHandler<Any?, Any?> { _, function ->
-            Log.i(tag, "js call move center")
+            Log.i(TAG, "js call move center")
             myLocation?.let {
                 aMap?.moveCamera(
                     CameraUpdateFactory.changeLatLng(LatLng(it.latitude, it.longitude))
@@ -70,8 +70,8 @@ class MapActivity : WebViewActivity(), LocationSource, AMapLocationListener {
             function.onResult(json(1, null, "success move to center of myself"))
         })
         mWebView.registerHandler("setMap", WVJBWebView.WVJBHandler<Any?, Any?> { data, function ->
-            Log.i(tag, "js call set Map")
-            Log.i(tag, data.toString())
+            Log.i(TAG, "js call set Map")
+            Log.i(TAG, data.toString())
             val data = Gson().fromJson(data.toString(), MapData::class.java)
             val mViewMap = findViewById<RelativeLayout>(R.id.view_map)
             mViewMap?.let {
@@ -90,7 +90,7 @@ class MapActivity : WebViewActivity(), LocationSource, AMapLocationListener {
                 layoutParams.height = data.height
                 it.layoutParams = layoutParams
 
-                Log.i(tag, data.toString())
+                Log.i(TAG, data.toString())
                 when (data.show) {
                     "visible" -> it.visibility = View.VISIBLE
                     "invisible" -> it.visibility = View.INVISIBLE
@@ -102,8 +102,8 @@ class MapActivity : WebViewActivity(), LocationSource, AMapLocationListener {
         })
         // 地图标记
         mWebView.registerHandler("markMap", WVJBWebView.WVJBHandler<Any?, Any?> { data, function ->
-            Log.i(tag, "js call mark Map")
-            Log.i(tag, data.toString())
+            Log.i(TAG, "js call mark Map")
+            Log.i(TAG, data.toString())
             val data = Gson().fromJson(data.toString(), MarkData::class.java)
 
             val markerOption = MarkerOptions()
@@ -114,7 +114,7 @@ class MapActivity : WebViewActivity(), LocationSource, AMapLocationListener {
             // 将Marker设置为贴地显示，可以双指下拉地图查看效果
             // 将Marker设置为贴地显示，可以双指下拉地图查看效果
             markerOption.isFlat = true //设置marker平贴地图效果
-            Log.i(tag, "start to mark")
+            Log.i(TAG, "start to mark")
             aMap?.addMarker(markerOption)
             function.onResult(json(1, null, "set map mark successfully"))
         })
@@ -122,7 +122,7 @@ class MapActivity : WebViewActivity(), LocationSource, AMapLocationListener {
 
     // init the map and location
     private fun setMyLocation(map: MapView) {
-        Log.i(tag, "set my location")
+        Log.i(TAG, "set my location")
         val myLocationStyle = MyLocationStyle()
         myLocationStyle.interval(5000)
         aMap = map.map
@@ -195,7 +195,7 @@ class MapActivity : WebViewActivity(), LocationSource, AMapLocationListener {
 
     override fun onLocationChanged(aMapLocation: AMapLocation?) {
         if (mListener != null && aMapLocation != null) {
-            if (aMapLocation.errorCode === 0) {
+            if (aMapLocation.errorCode == 0) {
                 myLocation = aMapLocation
                 mListener?.onLocationChanged(aMapLocation) // 显示系统小蓝点
             } else {

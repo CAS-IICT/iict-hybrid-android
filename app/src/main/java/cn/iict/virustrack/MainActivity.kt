@@ -11,7 +11,6 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.os.Bundle
-import android.os.Handler
 import android.util.Log
 import android.view.View
 import android.widget.LinearLayout
@@ -43,7 +42,7 @@ class MainActivity : WebViewActivity() {
     private var connectDevice: BleDeviceData? = null
 
     override val content = R.layout.activity_main
-    override val tag = this.javaClass.simpleName
+    override val TAG: String = this.javaClass.simpleName
 
     // autoose splash
     private val closeSplash = true
@@ -74,11 +73,11 @@ class MainActivity : WebViewActivity() {
                 val action = intent.action
                 if (action == GlobalVariable.READ_BLE_VERSION_ACTION) {
                     val version = intent.getStringExtra(GlobalVariable.INTENT_BLE_VERSION_EXTRA)
-                    Log.i(tag, "version: $version")
+                    Log.i(TAG, "version: $version")
                     mWebView.callHandler("OnBandVersion", json(1, version, "get band version"))
                 } else if ((action == GlobalVariable.READ_BATTERY_ACTION)) {
                     val battery = intent.getIntExtra(GlobalVariable.INTENT_BLE_BATTERY_EXTRA, -1)
-                    Log.i(tag, "battery: $battery")
+                    Log.i(TAG, "battery: $battery")
                     mWebView.callHandler("OnBandBattery", json(1, battery, "get band battery"))
                 }
             }
@@ -341,15 +340,15 @@ class MainActivity : WebViewActivity() {
 
     // these bridge functions can only used in this activity, not global and general
     override fun initBridge(mWebView: WVJBWebView) {
-        Log.i(tag, "InitBridge")
+        Log.i(TAG, "InitBridge")
         super.initBridge(mWebView)
-        Log.i(tag, "Register Band Callbacks")
+        Log.i(TAG, "Register Band Callbacks")
         // 设置连接后各种手环回调
         registerCallback(mWebView)
 
         mWebView.registerHandler("splash", WVJBHandler<Any?, Any?> { data, function ->
-            Log.i(tag, "js call splash")
-            Log.i(tag, data.toString())
+            Log.i(TAG, "js call splash")
+            Log.i(TAG, data.toString())
             val data = Gson().fromJson(data.toString(), SwitchData::class.java)
             if (!data.flag) {
                 splashView?.let {
@@ -365,21 +364,21 @@ class MainActivity : WebViewActivity() {
 
         // 扫描手环
         mWebView.registerHandler("scanBand", WVJBHandler<Any?, Any?> { data, function ->
-            Log.i(tag, "js call scan band")
-            Log.i(tag, data.toString())
+            Log.i(TAG, "js call scan band")
+            Log.i(TAG, data.toString())
             val data = Gson().fromJson(data.toString(), ScanBleData::class.java)
             if (check(function)) {
                 mBLEServiceOperate?.let {
                     if (!it.isSupportBle4_0) return@WVJBHandler function.onResult(
                         json(0, null, "ble 4.0 is not support")
                     )
-                    Log.i(tag, "start scan band")
+                    Log.i(TAG, "start scan band")
                     it.stopLeScan() //先关闭原来的扫描，不重复扫描
                     it.startLeScan()
                     // 定时关闭蓝牙扫描
                     GlobalScope.launch {
                         delay(data.time)
-                        Log.i(tag, "stop scan band")
+                        Log.i(TAG, "stop scan band")
                         it.stopLeScan()
                         mWebView.callHandler("OnBandScanFinish", json(1, null, "Finish Scan"))
                     }
@@ -391,8 +390,8 @@ class MainActivity : WebViewActivity() {
 
         // 连接手环
         mWebView.registerHandler("connectBand", WVJBHandler<Any?, Any?> { data, function ->
-            Log.i(tag, "js call connect band")
-            Log.i(tag, data.toString())
+            Log.i(TAG, "js call connect band")
+            Log.i(TAG, data.toString())
             val data = Gson().fromJson(data.toString(), BleDeviceData::class.java)
             if (check(function)) {
                 mBLEServiceOperate?.let {
@@ -414,7 +413,7 @@ class MainActivity : WebViewActivity() {
 
         // 检查已连接的手环
         mWebView.registerHandler("checkBand", WVJBHandler<Any?, Any?> { _, function ->
-            Log.i(tag, "js call check band")
+            Log.i(TAG, "js call check band")
             if (check(function)) {
                 if (connectStatus && connectDevice != null)
                     function.onResult(json(1, connectDevice, "connected"))
@@ -427,7 +426,7 @@ class MainActivity : WebViewActivity() {
 
         // 断开连接
         mWebView.registerHandler("disConnectBand", WVJBHandler<Any?, Any?> { _, function ->
-            Log.i(tag, "js call disconnect band")
+            Log.i(TAG, "js call disconnect band")
             if (check(function)) {
                 mBLEServiceOperate?.let {
                     mWebView.callHandler("BandLock")
@@ -438,7 +437,7 @@ class MainActivity : WebViewActivity() {
             }
         })
         mWebView.registerHandler("syncBandTime", WVJBHandler<Any?, Any?> { _, function ->
-            Log.i(tag, "js call sync band time")
+            Log.i(TAG, "js call sync band time")
             if (check(function, true)) {
                 mWriteCommand?.let {
                     Log.i("BandConnect", "sync time")
@@ -451,7 +450,7 @@ class MainActivity : WebViewActivity() {
 
         // 获取手环版本
         mWebView.registerHandler("bandVersion", WVJBHandler<Any?, Any?> { _, function ->
-            Log.i(tag, "js call band version")
+            Log.i(TAG, "js call band version")
             if (check(function, true)) {
                 mWriteCommand?.let {
                     mWebView.callHandler("BandLock")
@@ -463,7 +462,7 @@ class MainActivity : WebViewActivity() {
 
         // 获取手环电量
         mWebView.registerHandler("bandBattery", WVJBHandler<Any?, Any?> { _, function ->
-            Log.i(tag, "js call band battery")
+            Log.i(TAG, "js call band battery")
             if (check(function, true)) {
                 mWriteCommand?.let {
                     mWebView.callHandler("BandLock")
@@ -475,7 +474,7 @@ class MainActivity : WebViewActivity() {
 
         // 获取体温
         mWebView.registerHandler("bodyTemperature", WVJBHandler<Any?, Any?> { _, function ->
-            Log.i(tag, "js call band body temperature")
+            Log.i(TAG, "js call band body temperature")
             if (check(function, true)) {
                 mWriteCommand?.let {
                     mWebView.callHandler("BandLock")
@@ -487,7 +486,7 @@ class MainActivity : WebViewActivity() {
 
         // 同步计步
         mWebView.registerHandler("syncStep", WVJBHandler<Any?, Any?> { _, function ->
-            Log.i(tag, "js call sync step")
+            Log.i(TAG, "js call sync step")
             if (check(function, true)) {
                 mWriteCommand?.let {
                     mWebView.callHandler("BandLock")
@@ -499,7 +498,7 @@ class MainActivity : WebViewActivity() {
 
         // 同步睡眠
         mWebView.registerHandler("syncSleep", WVJBHandler<Any?, Any?> { _, function ->
-            Log.i(tag, "js call sync sleep")
+            Log.i(TAG, "js call sync sleep")
             if (check(function, true)) {
                 mWriteCommand?.let {
                     mWebView.callHandler("BandLock")
@@ -511,7 +510,7 @@ class MainActivity : WebViewActivity() {
 
         // 同步心率
         mWebView.registerHandler("syncRate", WVJBHandler<Any?, Any?> { _, function ->
-            Log.i(tag, "js call sync rate")
+            Log.i(TAG, "js call sync rate")
             if (check(function, true)) {
                 mWriteCommand?.let {
                     mWebView.callHandler("BandLock")
@@ -523,8 +522,8 @@ class MainActivity : WebViewActivity() {
 
         // 心率测试开关
         mWebView.registerHandler("testRate", WVJBHandler<Any?, Any?> { data, function ->
-            Log.i(tag, "js call test rate")
-            Log.i(tag, data.toString())
+            Log.i(TAG, "js call test rate")
+            Log.i(TAG, data.toString())
             val data = Gson().fromJson(data.toString(), SwitchData::class.java)
             if (check(function, true)) {
                 mWriteCommand?.let {
@@ -538,7 +537,7 @@ class MainActivity : WebViewActivity() {
 
         // 同步血压
         mWebView.registerHandler("syncBloodPressure", WVJBHandler<Any?, Any?> { _, function ->
-            Log.i(tag, "js call sync blood pressure")
+            Log.i(TAG, "js call sync blood pressure")
             if (check(function, true)) {
                 mWriteCommand?.let {
                     it.syncAllBloodPressureData()
@@ -549,8 +548,8 @@ class MainActivity : WebViewActivity() {
 
         // 测试血压
         mWebView.registerHandler("testBloodPressure", WVJBHandler<Any?, Any?> { data, function ->
-            Log.i(tag, "js call test blood pressure")
-            Log.i(tag, data.toString())
+            Log.i(TAG, "js call test blood pressure")
+            Log.i(TAG, data.toString())
             val data = Gson().fromJson(data.toString(), SwitchData::class.java)
             if (check(function, true)) {
                 mWriteCommand?.let {
@@ -562,7 +561,7 @@ class MainActivity : WebViewActivity() {
         })
         // 同步体温
         mWebView.registerHandler("syncTemperature", WVJBHandler<Any?, Any?> { _, function ->
-            Log.i(tag, "js call sync temperature")
+            Log.i(TAG, "js call sync temperature")
             if (check(function, true)) {
                 mWriteCommand?.let {
                     it.syncAllTemperatureData()
@@ -573,12 +572,12 @@ class MainActivity : WebViewActivity() {
 
         // 检查采集体温开关
         mWebView.registerHandler("temperatureStatus", WVJBHandler<Any?, Any?> { data, function ->
-            Log.i(tag, "js call set/get temp status")
-            Log.i(tag, data.toString())
+            Log.i(TAG, "js call set/get temp status")
+            Log.i(TAG, data.toString())
             val data = Gson().fromJson(data.toString(), SwitchData::class.java)
             if (check(function, true)) {
                 mWriteCommand?.let {
-                    Log.i(tag, "set temp status")
+                    Log.i(TAG, "set temp status")
                     it.setRawTemperatureStatus(data.flag)
                     function.onResult(json(1, null, "set raw temperature status, ${data.flag}"))
                 }
@@ -587,8 +586,8 @@ class MainActivity : WebViewActivity() {
 
         // 各种数据库读写
         mWebView.registerHandler("queryStepDate", WVJBHandler<Any?, Any?> { data, function ->
-            Log.i(tag, "js call query step date")
-            Log.i(tag, data.toString())
+            Log.i(TAG, "js call query step date")
+            Log.i(TAG, data.toString())
             val data = Gson().fromJson(data.toString(), BandDateData::class.java)
             if (check(function, true)) {
                 // 当日步数
@@ -597,8 +596,8 @@ class MainActivity : WebViewActivity() {
             }
         })
         mWebView.registerHandler("queryStepInfo", WVJBHandler<Any?, Any?> { data, function ->
-            Log.i(tag, "js call query step info")
-            Log.i(tag, data.toString())
+            Log.i(TAG, "js call query step info")
+            Log.i(TAG, data.toString())
             val data = Gson().fromJson(data.toString(), BandDateData::class.java)
             if (check(function, true)) {
                 mSQLOperate?.let {
@@ -613,8 +612,8 @@ class MainActivity : WebViewActivity() {
         })
         // 返回睡眠时间int
         mWebView.registerHandler("querySleepDate", WVJBHandler<Any?, Any?> { data, function ->
-            Log.i(tag, "js call query sleep date")
-            Log.i(tag, data.toString())
+            Log.i(TAG, "js call query sleep date")
+            Log.i(TAG, data.toString())
             val data = Gson().fromJson(data.toString(), BandDateData::class.java)
             if (check(function, true)) {
                 // 返回睡眠时间，int，单位是分钟
@@ -624,8 +623,8 @@ class MainActivity : WebViewActivity() {
         })
         // 返回详细睡眠信息
         mWebView.registerHandler("querySleepInfo", WVJBHandler<Any?, Any?> { data, function ->
-            Log.i(tag, "js call query sleep info")
-            Log.i(tag, data.toString())
+            Log.i(TAG, "js call query sleep info")
+            Log.i(TAG, data.toString())
             val data = Gson().fromJson(data.toString(), BandDateData::class.java)
             if (check(function, true)) {
                 mSQLOperate?.let {
@@ -651,8 +650,8 @@ class MainActivity : WebViewActivity() {
         })
         // 返回某一天最高最低当前平均心率
         mWebView.registerHandler("queryRateDate", WVJBHandler<Any?, Any?> { data, function ->
-            Log.i(tag, "js call query rate date")
-            Log.i(tag, data.toString())
+            Log.i(TAG, "js call query rate date")
+            Log.i(TAG, data.toString())
             val data = Gson().fromJson(data.toString(), BandDateData::class.java)
             if (check(function, true)) {
                 mSQLOperate?.let {
@@ -672,8 +671,8 @@ class MainActivity : WebViewActivity() {
         })
         // 返回某一天最高最低当前平均心率
         mWebView.registerHandler("queryRateInfo", WVJBHandler<Any?, Any?> { data, function ->
-            Log.i(tag, "js call query rate info")
-            Log.i(tag, data.toString())
+            Log.i(TAG, "js call query rate info")
+            Log.i(TAG, data.toString())
             val data = Gson().fromJson(data.toString(), BandDateData::class.java)
             if (check(function, true)) {
                 mSQLOperate?.let {
@@ -695,8 +694,8 @@ class MainActivity : WebViewActivity() {
         mWebView.registerHandler(
             "queryBloodPressureDate",
             WVJBHandler<Any?, Any?> { data, function ->
-                Log.i(tag, "js call query sleep info")
-                Log.i(tag, data.toString())
+                Log.i(TAG, "js call query sleep info")
+                Log.i(TAG, data.toString())
                 val data = Gson().fromJson(data.toString(), BandDateData::class.java)
                 if (check(function, true)) {
                     mSQLOperate?.let {
@@ -712,8 +711,8 @@ class MainActivity : WebViewActivity() {
             })
         // 返回某一天体温
         mWebView.registerHandler("queryTemperatureDate", WVJBHandler<Any?, Any?> { data, function ->
-            Log.i(tag, "js call query temperature date")
-            Log.i(tag, data.toString())
+            Log.i(TAG, "js call query temperature date")
+            Log.i(TAG, data.toString())
             val data = Gson().fromJson(data.toString(), BandDateData::class.java)
             if (check(function, true)) {
                 mSQLOperate?.let {
@@ -738,7 +737,7 @@ class MainActivity : WebViewActivity() {
         })
         // 返回全部体温
         mWebView.registerHandler("queryTemperatureInfo", WVJBHandler<Any?, Any?> { _, function ->
-            Log.i(tag, "js call query temperature info all data")
+            Log.i(TAG, "js call query temperature info all data")
             if (check(function, true)) {
                 mSQLOperate?.let {
                     val i = it.queryTemperatureAll()
@@ -802,19 +801,19 @@ class MainActivity : WebViewActivity() {
     }
 
     override fun onDestroy() {
-        Log.i(tag, "onDestroy()")
+        Log.i(TAG, "onDestroy()")
         mBLEServiceOperate?.stopLeScan()
         mBLEServiceOperate?.unBindService() // unBindService
         super.onDestroy()
     }
 
     override fun onResume() {
-        Log.i(tag, "onResume()")
+        Log.i(TAG, "onResume()")
         super.onResume()
     }
 
     override fun onPause() {
-        Log.i(tag, "onPause()")
+        Log.i(TAG, "onPause()")
         super.onPause()
     }
 

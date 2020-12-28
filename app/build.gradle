@@ -9,8 +9,8 @@ android {
         applicationId "cn.iict.virustrack"
         minSdkVersion 21
         targetSdkVersion 30
-        versionCode 1
-        versionName "1.0"
+        versionCode 2
+        versionName "1.1.2"
         testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
         ndk {
             // 设置支持的SO库架构，第三方给的so库哪几种架构，就配置这几种架构

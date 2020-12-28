@@ -30,7 +30,6 @@ import android.net.Uri
 import android.net.wifi.WifiManager
 import android.os.Build
 import android.os.Bundle
-import android.os.Handler
 import android.os.ParcelUuid
 import android.provider.Settings
 import android.text.TextUtils
@@ -65,14 +64,14 @@ import kotlin.collections.HashMap
 
 open class WebViewActivity : Activity() {
 
-    //open var url = "https://app.virus.iict.ac.cn" // formal server
+    open var url = "http://app.virus.iict.ac.cn" // formal server
 
-    open var url = "http://w1.iict.cn:8080" // test server
+    //open var url = "http://w1.iict.cn:8080" // test server
 
     // a flag to sign if first page has loaded successfully
     private var loaded = false
 
-    open val tag: String = this.javaClass.simpleName
+    open val TAG: String = this.javaClass.simpleName
     private var loading: Boolean = false
     open val content: Int = R.layout.activity_webview // overridable
     open var mWebView: WVJBWebView? = null
@@ -80,7 +79,7 @@ open class WebViewActivity : Activity() {
     val imagePicker: ImagePicker = ImagePicker()
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        Log.i("Activity", tag) // 提示当前所处activity
+        Log.i("Activity", TAG) // 提示当前所处activity
         super.onCreate(savedInstanceState)
         setContentView(content)
         val bundle = this.intent.extras
@@ -103,7 +102,7 @@ open class WebViewActivity : Activity() {
         otherUrl: String? = null
     ) {
         otherUrl?.let { url = it }
-        Log.i(tag, "initWebView: $url")
+        Log.i(TAG, "initWebView: $url")
         showLoading(loading)
         val webSettings = mWebView.settings
 
@@ -129,18 +128,13 @@ open class WebViewActivity : Activity() {
         //获取触摸焦点
         mWebView.requestFocusFromTouch()
         // >= 19(SDK4.4)启动硬件加速，否则启动软件加速
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
-            mWebView.setLayerType(View.LAYER_TYPE_HARDWARE, null)
-            webSettings.loadsImagesAutomatically = true //支持自动加载图片
-        } else {
-            mWebView.setLayerType(View.LAYER_TYPE_SOFTWARE, null)
-            webSettings.loadsImagesAutomatically = false
-        }
+        mWebView.setLayerType(View.LAYER_TYPE_HARDWARE, null)
+        webSettings.loadsImagesAutomatically = true  //支持自动加载图片
 
         //deal with the error network
         mWebView.webViewClient = object : WebViewClient() {
             override fun onPageFinished(view: WebView?, url: String?) {
-                Log.i(tag, "Webview finish loading: $url")
+                Log.i(TAG, "Webview finish loading: $url")
                 // mark loaded successfully
                 loaded = true
                 onLoadFinish()
@@ -152,7 +146,7 @@ open class WebViewActivity : Activity() {
                 p1: WebResourceRequest?,
                 p2: WebResourceError?
             ) {
-                Log.i(tag, "onReceivedError")
+                Log.i(TAG, "onReceivedError")
                 onLoadError()
                 if (!loaded) p0?.loadUrl("file:///android_asset/error.html")
                 super.onReceivedError(p0, p1, p2)
@@ -163,14 +157,14 @@ open class WebViewActivity : Activity() {
                 request: WebResourceRequest?,
                 errorResponse: WebResourceResponse?
             ) {
-                Log.i(tag, "onReceivedHttpError")
+                Log.i(TAG, "onReceivedHttpError")
                 super.onReceivedHttpError(view, request, errorResponse)
             }
         }
         // deal with error page for android < 6.0 mash
         mWebView.webChromeClient = object : WebChromeClient() {
             override fun onReceivedTitle(view: WebView, title: String) {
-                Log.i(tag, "$title")
+                Log.i(TAG, title)
                 if (title.contains("404")
                     || title.contains("找不到")
                     || title.contains("Error")
@@ -199,11 +193,11 @@ open class WebViewActivity : Activity() {
     }
 
     open fun onLoadError() {
-        Log.i(tag, "register refresh error page: $url")
+        Log.i(TAG, "register refresh error page: $url")
         mWebView?.registerHandler(
             "refreshErrorPage",
             WVJBWebView.WVJBHandler<Any?, Any?> { _, function ->
-                Log.i(tag, "js call refreshErrorPage: $url")
+                Log.i(TAG, "js call refreshErrorPage: $url")
                 function.onResult(json(1, url, "refresh the error page"))
             })
         showLoading(false)
@@ -242,7 +236,7 @@ open class WebViewActivity : Activity() {
             val bluetoothAdapter = BluetoothAdapter.getDefaultAdapter()
             val bluetoothManagerService = Mirror().on(bluetoothAdapter).get().field("mService")
             if (bluetoothManagerService == null) {
-                Log.w(tag, "no bluetoothManagerService")
+                Log.w(TAG, "no bluetoothManagerService")
                 return "02:00:00:00:00:00"
             }
             val address =
@@ -311,7 +305,7 @@ open class WebViewActivity : Activity() {
         return uuids
     }
 
-    // 初始化广播，GATT 
+    // 初始化广播，GATT
     @TargetApi(Build.VERSION_CODES.LOLLIPOP)
     fun startGATT(uuids: HashMap<String, UUID>, callback: AdvertiseCallback) {
         val settings: AdvertiseSettings = AdvertiseSettings.Builder()
@@ -374,7 +368,7 @@ open class WebViewActivity : Activity() {
     override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
         if (keyCode == KeyEvent.KEYCODE_BACK) {
             return if (mWebView!!.canGoBack()) {
-                Log.i(tag, "webview go back")
+                Log.i(TAG, "webview go back")
                 mWebView?.goBack()
                 true
             } else {
@@ -389,7 +383,7 @@ open class WebViewActivity : Activity() {
     }
 
     private fun exit() {
-        if (isExit < 2 && tag == "MainActivity") {
+        if (isExit < 2 && TAG == "MainActivity") {
             Toast.makeText(applicationContext, R.string.exit, Toast.LENGTH_SHORT).show()
             GlobalScope.launch {
                 delay(2000L)
@@ -442,9 +436,9 @@ open class WebViewActivity : Activity() {
         imagePicker.onRequestPermissionsResult(this, requestCode, permissions, grantResults)
         when (requestCode) {
             accessCode -> if (checkPermission(grantResults)) {
-                Log.i(tag, "onRequestPermissionsResult: 用户允许权限 accessCode:$accessCode")
+                Log.i(TAG, "onRequestPermissionsResult: 用户允许权限 accessCode:$accessCode")
             } else {
-                Log.i(tag, "onRequestPermissionsResult: 拒绝搜索设备权限 accessCode:$accessCode")
+                Log.i(TAG, "onRequestPermissionsResult: 拒绝搜索设备权限 accessCode:$accessCode")
                 if (countRequest > 2) {
                     // ask User to grant permission manually
                     AlertDialog.Builder(this)
@@ -514,10 +508,10 @@ open class WebViewActivity : Activity() {
             val os = ByteArrayOutputStream()
             bitmap.compress(Bitmap.CompressFormat.PNG, quality, os)
             val bytes = os.toByteArray()
-            Log.i(tag, "path:$path, quality:$quality")
+            Log.i(TAG, "path:$path, quality:$quality")
             String(Base64.encode(bytes, Base64.DEFAULT))
         } catch (e: IOException) {
-            Log.e(tag, e.message.toString())
+            Log.e(TAG, e.message.toString())
             null
         }
     }

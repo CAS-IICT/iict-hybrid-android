@@ -35,15 +35,17 @@ import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.util.*
+import kotlin.collections.HashMap
 
 object Init {
-    val tag: String = this.javaClass.simpleName
+    val TAG: String = this.javaClass.simpleName
+    var GATT_STATUS: HashMap<String, UUID>? = null // GATT service status
 
     fun initBridge(mWebView: WVJBWebView, activity: WebViewActivity) {
-        Log.i(tag, "WebViewActivity: initBridge")
+        Log.i(TAG, "WebViewActivity: initBridge")
         // bacn
         mWebView.registerHandler("back", WVJBWebView.WVJBHandler<Any?, Any?> { _, function ->
-            Log.i(tag, "js call back")
+            Log.i(TAG, "js call back")
             if (mWebView.canGoBack()) {
                 mWebView.goBack()
                 function.onResult(activity.json(1))
@@ -54,16 +56,16 @@ object Init {
         })
         // toast
         mWebView.registerHandler("toast", WVJBWebView.WVJBHandler<Any?, Any?> { data, function ->
-            Log.i(tag, "js call toast")
-            Log.i(tag, data.toString())
+            Log.i(TAG, "js call toast")
+            Log.i(TAG, data.toString())
             val data = Gson().fromJson(data.toString(), ToastData::class.java)
             activity.toast(data.text)
             function.onResult(activity.json(1))
         })
         // alert
         mWebView.registerHandler("alert", WVJBWebView.WVJBHandler<Any?, Any?> { data, function ->
-            Log.i(tag, "js call alert")
-            Log.i(tag, data.toString())
+            Log.i(TAG, "js call alert")
+            Log.i(TAG, data.toString())
             val data = Gson().fromJson(data.toString(), AlertData::class.java)
             AlertDialog.Builder(activity)
                 .setMessage(data.message)
@@ -74,8 +76,8 @@ object Init {
         })
         // loading
         mWebView.registerHandler("loading", WVJBWebView.WVJBHandler<Any?, Any?> { data, function ->
-            Log.i(tag, "js call loading")
-            Log.i(tag, data.toString())
+            Log.i(TAG, "js call loading")
+            Log.i(TAG, data.toString())
             val data = Gson().fromJson(data.toString(), LoadingData::class.java)
             activity.showLoading(data.load)
             function.onResult(activity.json(1))
@@ -84,8 +86,8 @@ object Init {
         mWebView.registerHandler(
             "setStatusBar",
             WVJBWebView.WVJBHandler<Any?, Any?> { data, function ->
-                Log.i(tag, "js call set status bar")
-                Log.i(tag, data.toString())
+                Log.i(TAG, "js call set status bar")
+                Log.i(TAG, data.toString())
                 val resources: Resources = activity.applicationContext.resources
                 val resourceId: Int =
                     resources.getIdentifier("status_bar_height", "dimen", "android")
@@ -114,7 +116,7 @@ object Init {
                         )
                     )
                 } else {
-                    Log.i(tag, "call set status bar fail")
+                    Log.i(TAG, "call set status bar fail")
                     function.onResult(
                         activity.json(
                             0,
@@ -126,15 +128,15 @@ object Init {
             })
         // start a new webview activity and go to the specified url
         mWebView.registerHandler("go", WVJBWebView.WVJBHandler<Any?, Any?> { data, function ->
-            Log.i(tag, "js call go other webview, new activity")
-            Log.i(tag, data.toString())
+            Log.i(TAG, "js call go other webview, new activity")
+            Log.i(TAG, data.toString())
             val data = Gson().fromJson(data.toString(), WebViewData::class.java)
             activity.goWebView(data.url, data.loading)
             function.onResult(activity.json(1, null, data.url))
         })
         // 获取手机屏幕大小
         mWebView.registerHandler("getWinSize", WVJBWebView.WVJBHandler<Any?, Any?> { _, function ->
-            Log.i(tag, "js call get win size")
+            Log.i(TAG, "js call get win size")
             val manager = activity.windowManager
             val outMetrics = DisplayMetrics()
             manager.defaultDisplay.getMetrics(outMetrics)
@@ -147,7 +149,7 @@ object Init {
         mWebView.registerHandler(
             "getNavBarSize",
             WVJBWebView.WVJBHandler<Any?, Any?> { _, function ->
-                Log.i(tag, "js call get nav bar size")
+                Log.i(TAG, "js call get nav bar size")
                 val ctx = activity.applicationContext
                 function.onResult(
                     activity.json(
@@ -165,27 +167,27 @@ object Init {
         mWebView.registerHandler(
             "getLocalUuid",
             WVJBWebView.WVJBHandler<Any?, Any?> { _, function ->
-                Log.i(tag, "js call get local uuid")
+                Log.i(TAG, "js call get local uuid")
                 val uuids = activity.getLocalUUID()
                 function.onResult(activity.json(1, uuids, "local uuids"))
             })
         // check bluetooth device status
         mWebView.registerHandler("checkBle", WVJBWebView.WVJBHandler<Any?, Any?> { _, function ->
-            Log.i(tag, "js call checkBle")
+            Log.i(TAG, "js call checkBle")
             if (activity.checkBle()) {
                 val msg = "Bluetooth is enabled"
-                Log.i(tag, msg)
+                Log.i(TAG, msg)
                 function.onResult(activity.json(1, null, msg))
             } else {
                 val msg = "Bluetooth is unavailable"
-                Log.i(tag, msg)
+                Log.i(TAG, msg)
                 function.onResult(activity.json(0, null, msg))
             }
         })
 
         // turn on bluetooth device
         mWebView.registerHandler("turnOnBle", WVJBWebView.WVJBHandler<Any?, Any?> { _, function ->
-            Log.i(tag, "js call turn on Ble")
+            Log.i(TAG, "js call turn on Ble")
             val blueAdapter = BluetoothAdapter.getDefaultAdapter()
             if (blueAdapter != null) {
                 if (blueAdapter.isEnabled)
@@ -202,9 +204,12 @@ object Init {
                                     BluetoothAdapter.ERROR
                                 )
                                 when (action) {
-                                    BluetoothAdapter.STATE_OFF -> function.onResult(
-                                        activity.json(0, null, "Ble is off")
-                                    )
+                                    BluetoothAdapter.STATE_OFF -> {
+                                        GATT_STATUS = null // when turn off ble, stop GATT
+                                        function.onResult(
+                                            activity.json(0, null, "Ble is off")
+                                        )
+                                    }
                                     BluetoothAdapter.STATE_ON -> function.onResult(
                                         activity.json(1, null, "Ble is on")
                                     )
@@ -220,8 +225,8 @@ object Init {
 
         // start BLE GATT service
         mWebView.registerHandler("setGATT", WVJBWebView.WVJBHandler<Any?, Any?> { data, function ->
-            Log.i(tag, "js call set GATT")
-            Log.i(tag, data.toString())
+            Log.i(TAG, "js call set GATT")
+            Log.i(TAG, data.toString())
             val data = Gson().fromJson(data.toString(), GATTData::class.java)
             if (activity.checkBle()) {
                 val uuids = activity.setUuids()
@@ -235,27 +240,36 @@ object Init {
                 val data2 = BleInfoData(name, mac, uuids) // 自己的蓝牙信息
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
                     if (data.flag) {
-                        activity.startGATT(uuids, object : AdvertiseCallback() {
-                            override fun onStartSuccess(settingsInEffect: AdvertiseSettings?) {
-                                function.onResult(
-                                    activity.json(1, data2, "GATT succeed to start")
-                                )
-                                super.onStartSuccess(settingsInEffect)
-                            }
+                        if (GATT_STATUS != null) {
+                            function.onResult(
+                                activity.json(1, data2, "GATT Already started!")
+                            )
+                        } else {
+                            activity.startGATT(uuids, object : AdvertiseCallback() {
+                                override fun onStartSuccess(settingsInEffect: AdvertiseSettings?) {
+                                    function.onResult(
+                                        activity.json(1, data2, "GATT succeed to start")
+                                    )
+                                    GATT_STATUS = uuids // set status to true
+                                    super.onStartSuccess(settingsInEffect)
+                                }
 
-                            override fun onStartFailure(errorCode: Int) {
-                                function.onResult(
-                                    activity.json(0, data2, "GATT fail to start, $errorCode")
-                                )
-                                super.onStartFailure(errorCode)
-                            }
-                        })
+                                override fun onStartFailure(errorCode: Int) {
+                                    function.onResult(
+                                        activity.json(0, data2, "GATT fail to start, $errorCode")
+                                    )
+                                    GATT_STATUS = null
+                                    super.onStartFailure(errorCode)
+                                }
+                            })
+                        }
                     } else {
                         activity.stopGATT(object : AdvertiseCallback() {
                             override fun onStartSuccess(settingsInEffect: AdvertiseSettings?) {
                                 function.onResult(
                                     activity.json(1, data2, "GATT succeed to stop")
                                 )
+                                GATT_STATUS = null
                                 super.onStartSuccess(settingsInEffect)
                             }
 
@@ -269,7 +283,7 @@ object Init {
                     }
                 } else {
                     function.onResult(
-                        activity.json(0, data2, "GATT broadcast fail to start, Android<5.1")
+                        activity.json(0, data2, "GATT broadcast fail to start, Android < 5.1")
                     )
                 }
             } else {
@@ -287,8 +301,8 @@ object Init {
          *注意5：方案：针对android 5.1以下采用传统扫描方式，获取MAC地址
          */
         mWebView.registerHandler("scanBle", WVJBWebView.WVJBHandler<Any?, Any?> { data, function ->
-            Log.i(tag, "js call scanBle")
-            Log.i(tag, data.toString())
+            Log.i(TAG, "js call scanBle")
+            Log.i(TAG, data.toString())
             val data = Gson().fromJson(data.toString(), ScanBleData::class.java)
             if (activity.checkBle()) {
                 if (data.lowPower && Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
@@ -318,14 +332,14 @@ object Init {
                         override fun onScanFailed(errorCode: Int) {
                             super.onScanFailed(errorCode)
                             val msg = "BleScan fail to scan errorCode: $errorCode"
-                            Log.i(tag, msg)
-                            Log.i(tag, errorCode.toString())
+                            Log.i(TAG, msg)
+                            Log.i(TAG, errorCode.toString())
                             mWebView.callHandler("OnBleScanFailed", activity.json(0, errorCode))
                         }
                     }
 
                     val scanner = BluetoothAdapter.getDefaultAdapter().bluetoothLeScanner
-                    Log.i(tag, "start low power Ble scan for ${data.time / 1000}s")
+                    Log.i(TAG, "start low power Ble scan for ${data.time / 1000}s")
                     scanner.startScan(scanLowCallback)
                     // 已经开始扫描，低功耗蓝牙
                     function.onResult(activity.json(1, null, "Start scan Ble (Low Power)"))
@@ -333,7 +347,7 @@ object Init {
                     GlobalScope.launch {
                         delay(data.time)
                         scanner.stopScan(scanLowCallback)
-                        Log.i(tag, "stop scan Ble")
+                        Log.i(TAG, "stop scan Ble")
                         mWebView.callHandler(
                             "OnBleFinishScan",
                             activity.json(1, null, "Finish Scan (Low Power Mode)")
@@ -393,12 +407,12 @@ object Init {
                     filter.addAction(BluetoothAdapter.ACTION_DISCOVERY_FINISHED)
                     filter.addAction(BluetoothAdapter.ACTION_DISCOVERY_STARTED)
                     activity.registerReceiver(scanCallback, filter)
-                    Log.i(tag, "start traditional Ble discovery for ${data.time / 1000}s")
+                    Log.i(TAG, "start traditional Ble discovery for ${data.time / 1000}s")
                     scanner.startDiscovery()
                     // delay to stop
                     GlobalScope.launch {
                         delay(data.time)
-                        Log.i(tag, "stop discovery Ble")
+                        Log.i(TAG, "stop discovery Ble")
                         scanner.cancelDiscovery()
                         mWebView.callHandler(
                             "OnBleFinishScan",
@@ -419,7 +433,7 @@ object Init {
 
         // scan wifi
         mWebView.registerHandler("scanWifi", WVJBWebView.WVJBHandler<Any?, Any?> { _, function ->
-            Log.i(tag, "js call scanWifi")
+            Log.i(TAG, "js call scanWifi")
             if (activity.checkWifi()) {
                 val wifiManager =
                     activity.applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
@@ -439,8 +453,8 @@ object Init {
 
         // get location position, 统一只使用高德
         mWebView.registerHandler("location", WVJBWebView.WVJBHandler<Any?, Any?> { data, function ->
-            Log.i(tag, "js call get location")
-            Log.i(tag, data.toString())
+            Log.i(TAG, "js call get location")
+            Log.i(TAG, data.toString())
             val mLocationClient = AMapLocationClient(activity)
             val mLocationOption = AMapLocationClientOption()
             mLocationOption.locationMode =
@@ -453,7 +467,7 @@ object Init {
             mLocationClient.stopLocation()
             mLocationClient.startLocation()
             mLocationClient.setLocationListener {
-                Log.i(tag, it.toString())
+                Log.i(TAG, it.toString())
                 val data = LocData(
                     it.longitude,
                     it.latitude,
@@ -478,8 +492,8 @@ object Init {
         // get weather info
         mWebView.registerHandler("weatherInfo",
             WVJBWebView.WVJBHandler<Any?, Any?> { data, function ->
-                Log.i(tag, "js call get weather info")
-                Log.i(tag, data.toString())
+                Log.i(TAG, "js call get weather info")
+                Log.i(TAG, data.toString())
                 val data = Gson().fromJson(data.toString(), WeatherReqData::class.java)
                 val city = data.city
                 val mQuery = if (data.type == 1) {
@@ -495,7 +509,7 @@ object Init {
                     WeatherSearch.OnWeatherSearchListener {
                     override fun onWeatherLiveSearched(p0: LocalWeatherLiveResult?, p1: Int) {
                         if (data.type == 1) {
-                            Log.i(tag, "get weather live info")
+                            Log.i(TAG, "get weather live info")
                             val result = p0?.liveResult
                             result?.let {
                                 val data = WeatherData(
@@ -519,7 +533,7 @@ object Init {
                         p1: Int
                     ) {
                         if (data.type == 2) {
-                            Log.i(tag, "get weather forecast info")
+                            Log.i(TAG, "get weather forecast info")
                             function.onResult(
                                 activity.json(
                                     1,
@@ -534,20 +548,20 @@ object Init {
 
         // title, base64=true or false, if true, it will transform file to base64
         mWebView.registerHandler("cropper", WVJBWebView.WVJBHandler<Any?, Any?> { data, function ->
-            Log.i(tag, "js call get cropper img")
-            Log.i(tag, data.toString())
+            Log.i(TAG, "js call get cropper img")
+            Log.i(TAG, data.toString())
             val data = Gson().fromJson(data.toString(), CropperData::class.java)
             activity.imagePicker.setTitle(data.title)
             activity.imagePicker.setCropImage(true)
             activity.imagePicker.startChooser(activity, object : ImagePicker.Callback() {
                 // 选择图片回调
                 override fun onPickImage(imageUri: Uri) {
-                    Log.i(tag, "origin img $imageUri")
+                    Log.i(TAG, "origin img $imageUri")
                 }
 
                 // 裁剪图片回调
                 override fun onCropImage(imageUri: Uri) {
-                    Log.i(tag, "cropped img ${imageUri.path}")
+                    Log.i(TAG, "cropped img ${imageUri.path}")
                     if (data.base64) {
                         val baseImg = activity.base64Img(imageUri.path, data.quality)
                         function.onResult(
@@ -583,8 +597,8 @@ object Init {
 
         mWebView.registerHandler("openMapActivity",
             WVJBWebView.WVJBHandler<Any?, Any?> { data, function ->
-                Log.i(tag, "js call get cropper img")
-                Log.i(tag, data.toString())
+                Log.i(TAG, "js call get cropper img")
+                Log.i(TAG, data.toString())
                 val data = Gson().fromJson(data.toString(), OpenMapData::class.java)
                 activity.goMap(data.path)
                 function.onResult(activity.json(1, null, "map opened"))
@@ -592,14 +606,14 @@ object Init {
 
         mWebView.registerHandler("getMac",
             WVJBWebView.WVJBHandler<Any?, Any?> { _, function ->
-                Log.i(tag, "js call get mac address")
+                Log.i(TAG, "js call get mac address")
                 val mac = Mac(activity.getBleMac(), activity.getWifiMac())
                 function.onResult(activity.json(1, mac, "Mac Got"))
             })
 
         mWebView.registerHandler("getVersion",
             WVJBWebView.WVJBHandler<Any?, Any?> { _, function ->
-                Log.i(tag, "js call get version")
+                Log.i(TAG, "js call get version")
                 val version =
                     activity.packageManager.getPackageInfo(activity.packageName, 0).versionName
                 var vnum = activity.packageManager.getPackageInfo(
@@ -612,10 +626,10 @@ object Init {
 
         mWebView.registerHandler("updateApp",
             WVJBWebView.WVJBHandler<Any?, Any?> { data, function ->
-                Log.i(tag, "js call update app")
+                Log.i(TAG, "js call update app")
                 val data = Gson().fromJson(data.toString(), AppData::class.java)
 
-                Log.i(tag, data.toString())
+                Log.i(TAG, data.toString())
                 val builder = AppUpdateManager.Builder(activity)
                 builder.apkUrl(data.url)
                     .updateContent(data.description)
