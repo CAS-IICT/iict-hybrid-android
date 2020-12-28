@@ -11,7 +11,7 @@ stages:
 
 # 提交代码自动编译
 build:
-    image: gitlab-ci-android:V2 # 用来编译 android 项目的镜像
+    image: jangrewe/gitlab-ci-android
     stage: build
     script:
         - ./gradlew assembleRelease
