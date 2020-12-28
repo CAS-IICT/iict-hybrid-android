@@ -1,7 +1,6 @@
 #!/bin/bash
 # 账号密码在gitlab virable中
 targetDay=$(date)
-
 mkdir ~/.ssh
 echo -e "Host *\n\tStrictHostKeyChecking no\n\n" >~/.ssh/config
 
