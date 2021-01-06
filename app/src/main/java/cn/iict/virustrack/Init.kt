@@ -459,8 +459,6 @@ object Init {
             val mLocationOption = AMapLocationClientOption()
             mLocationOption.locationMode =
                 AMapLocationClientOption.AMapLocationMode.Hight_Accuracy
-            mLocationOption.locationMode =
-                AMapLocationClientOption.AMapLocationMode.Battery_Saving
             mLocationOption.isOnceLocation = true
             mLocationOption.isOnceLocationLatest = true
             mLocationClient.setLocationOption(mLocationOption)
@@ -476,17 +474,25 @@ object Init {
                     it.speed,
                     it.time,
                     it.province,
-                    null,
                     it.country,
-                    it.adCode,
                     it.city,
-                    it.district,
                     it.cityCode,
+                    it.district,
+                    it.adCode,
                     it.address,
                     it.street,
-                    it.streetNum
+                    it.streetNum,
+                    it.aoiName,
+                    it.buildingId,
+                    it.district,
+                    it.floor,
+                    it.locationType,
+                    it.locationDetail,
+                    it.description,
+                    it.gpsAccuracyStatus
                 )
-                function.onResult(activity.json(1, data, "GaoDe get location"))
+                if (it.errorCode != 0) activity.json(0, it, it.errorInfo)
+                else function.onResult(activity.json(1, data, "GaoDe get location"))
             }
         })
         // get weather info

@@ -35,15 +35,22 @@ data class LocData(
     val speed: Float?,
     val time: Long?,
     val province: String?,
-    val countryCode: String?,
     val country: String?,
-    val zipCode: String?,
     val city: String?,
+    val cityCode: String?,
     val area: String?,
-    val cityPhoneNum: String? = null,
-    val address: String? = null,
-    val street: String? = null,
-    val streetNum: String? = null
+    val adCode: String,
+    val address: String?,
+    val street: String?,
+    val streetNum: String?,
+    val aoiName: String?,
+    val buildingId: String?,
+    val district: String?,
+    val floor: String?,
+    val locationType: Int?,
+    val locationDetail: String?,
+    val description: String?,
+    val gpsAccuracyStatus: Int?
 )
 
 data class WeatherReqData(
