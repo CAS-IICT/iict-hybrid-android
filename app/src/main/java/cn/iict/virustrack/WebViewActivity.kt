@@ -66,7 +66,7 @@ open class WebViewActivity : Activity() {
 
     open var url = "http://app.virus.iict.ac.cn" // formal server
 
-    //open var url = "http://w1.iict.cn:8080" // test server
+    //open var url = "http://192.168.2.5:8080" // test server
 
     // a flag to sign if first page has loaded successfully
     private var loaded = false
@@ -85,7 +85,11 @@ open class WebViewActivity : Activity() {
         val bundle = this.intent.extras
         bundle?.getBoolean("loading")?.let { loading = it }
         // 当有url传入的时候在本类中直接调用initWebView，该类一般不被继承了
-        bundle?.getString("url")?.let { url = it }
+        bundle?.getString("url")?.let {
+            if (it[0].toString() == "/") url += it
+            else url = it
+            Log.i("WEB_URL",url)
+        }
         // 获取权限，蓝牙，wifi等
         getPermission()
         findViewById<WVJBWebView>(R.id.webview)?.let {
@@ -336,8 +340,11 @@ open class WebViewActivity : Activity() {
     @TargetApi(Build.VERSION_CODES.LOLLIPOP)
     fun stopGATT(callback: AdvertiseCallback) {
         val mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter()
-        val bluetoothLeAdvertiser: BluetoothLeAdvertiser = mBluetoothAdapter.bluetoothLeAdvertiser
-        bluetoothLeAdvertiser.stopAdvertising(callback)
+        if (mBluetoothAdapter != null && mBluetoothAdapter.isEnabled) {
+            val bluetoothLeAdvertiser: BluetoothLeAdvertiser =
+                mBluetoothAdapter.bluetoothLeAdvertiser
+            bluetoothLeAdvertiser.stopAdvertising(callback)
+        }
     }
 
     // go to other activity

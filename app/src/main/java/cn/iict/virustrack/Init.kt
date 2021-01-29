@@ -193,35 +193,84 @@ object Init {
                 if (blueAdapter.isEnabled)
                     function.onResult(activity.json(1, null, "Ble is on"))
                 else {
-                    blueAdapter.enable()
-                    val filter = IntentFilter(BluetoothAdapter.ACTION_STATE_CHANGED)
-                    val bleOpenCallback = object : BroadcastReceiver() {
-                        override fun onReceive(context: Context?, intent: Intent) {
-                            val action = intent.action
-                            if (action.equals(BluetoothAdapter.ACTION_STATE_CHANGED)) {
-                                val action = intent.getIntExtra(
-                                    BluetoothAdapter.EXTRA_STATE,
-                                    BluetoothAdapter.ERROR
-                                )
-                                when (action) {
-                                    BluetoothAdapter.STATE_OFF -> {
-                                        GATT_STATUS = null // when turn off ble, stop GATT
-                                        function.onResult(
-                                            activity.json(0, null, "Ble is off")
+                    val enable = blueAdapter.enable()
+                    if (enable) {
+                        val bleOpenCallback = object : BroadcastReceiver() {
+                            override fun onReceive(context: Context?, intent: Intent) {
+                                val action = intent.action
+                                if (action.equals(BluetoothAdapter.ACTION_STATE_CHANGED)) {
+                                    val action = intent.getIntExtra(
+                                        BluetoothAdapter.EXTRA_STATE,
+                                        BluetoothAdapter.ERROR
+                                    )
+                                    when (action) {
+                                        BluetoothAdapter.STATE_ON -> function.onResult(
+                                            activity.json(1, null, "Ble is on")
                                         )
                                     }
-                                    BluetoothAdapter.STATE_ON -> function.onResult(
+                                }
+                            }
+                        }
+                        val filter = IntentFilter(BluetoothAdapter.ACTION_STATE_CHANGED)
+                        activity.registerReceiver(bleOpenCallback, filter)
+                    } else {
+                        function.onResult(
+                            activity.json(0, null, "Ble is off, user reject")
+                        )
+                    }
+                }
+            } else function.onResult(activity.json(0, null, "Fail to turn on, no ble adapter"))
+        })
+
+        // listen BLE device status
+        mWebView.registerHandler("listenBle", WVJBWebView.WVJBHandler<Any?, Any?> { _, function ->
+            val blueAdapter = BluetoothAdapter.getDefaultAdapter()
+            if (blueAdapter != null) {
+                val filter = IntentFilter(BluetoothAdapter.ACTION_STATE_CHANGED)
+                val bleOpenCallback = object : BroadcastReceiver() {
+                    override fun onReceive(context: Context?, intent: Intent) {
+                        val action = intent.action
+                        if (action.equals(BluetoothAdapter.ACTION_STATE_CHANGED)) {
+                            val action = intent.getIntExtra(
+                                BluetoothAdapter.EXTRA_STATE,
+                                BluetoothAdapter.ERROR
+                            )
+                            when (action) {
+                                BluetoothAdapter.STATE_OFF -> {
+                                    GATT_STATUS = null // when turn off ble, stop GATT
+                                    mWebView.callHandler(
+                                        "OnBleOff",
+                                        activity.json(0, null, "Ble is off")
+                                    )
+                                }
+                                BluetoothAdapter.STATE_TURNING_OFF -> {
+                                    mWebView.callHandler(
+                                        "OnBleOffing",
+                                        activity.json(0, null, "Ble is turning off")
+                                    )
+                                }
+                                BluetoothAdapter.STATE_ON -> {
+                                    mWebView.callHandler(
+                                        "OnBleOn",
                                         activity.json(1, null, "Ble is on")
+                                    )
+                                }
+                                BluetoothAdapter.STATE_TURNING_ON -> {
+                                    mWebView.callHandler(
+                                        "OnBleOning",
+                                        activity.json(1, null, "Ble is turning on")
                                     )
                                 }
                             }
                         }
                     }
-                    activity.registerReceiver(bleOpenCallback, filter)
                 }
-            } else function.onResult(activity.json(0, null, "Fail to turn on, no ble adapter"))
+                activity.registerReceiver(bleOpenCallback, filter)
+                function.onResult(activity.json(1, null, "Ble start listening"))
+            } else {
+                function.onResult(activity.json(0, null, "Ble is not available"))
+            }
         })
-
 
         // start BLE GATT service
         mWebView.registerHandler("setGATT", WVJBWebView.WVJBHandler<Any?, Any?> { data, function ->
